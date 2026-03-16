@@ -4,6 +4,7 @@ import { TotalVaultCard } from '../components/vault/TotalVaultCard';
 import { LiveRatesBar } from '../components/vault/LiveRatesBar';
 import { AssetSummaryCard } from '../components/vault/AssetSummaryCard';
 import { Vault } from 'lucide-react';
+import { InstallGuide } from '../components/common/InstallGuide';
 
 export function VaultPage() {
   const transactions = useVaultStore((s) => s.transactions);
@@ -12,7 +13,8 @@ export function VaultPage() {
   if (transactions.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-        <Vault size={64} className="text-gray-300 mb-4" />
+        <InstallGuide />
+        <Vault size={64} className="text-gray-300 mb-4 mt-4" />
         <h2 className="text-lg font-semibold text-gray-500 mb-1">Kasanız Boş</h2>
         <p className="text-sm text-gray-400">
           İlk varlığınızı eklemek için "Ekle" sekmesine gidin.
@@ -23,6 +25,7 @@ export function VaultPage() {
 
   return (
     <div className="flex-1 overflow-y-auto pb-4">
+      <InstallGuide />
       <TotalVaultCard
         totalValue={totals.totalValue}
         totalCost={totals.totalCost}
