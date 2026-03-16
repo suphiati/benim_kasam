@@ -1,6 +1,6 @@
-import { LayoutDashboard, List, PlusCircle } from 'lucide-react';
+import { LayoutDashboard, List, PlusCircle, Settings } from 'lucide-react';
 
-export type TabId = 'vault' | 'transactions' | 'add';
+export type TabId = 'vault' | 'transactions' | 'add' | 'settings';
 
 interface TabBarProps {
   activeTab: TabId;
@@ -11,6 +11,7 @@ const tabs = [
   { id: 'vault' as TabId, label: 'Kasam', icon: LayoutDashboard },
   { id: 'add' as TabId, label: 'Ekle', icon: PlusCircle },
   { id: 'transactions' as TabId, label: 'İşlemler', icon: List },
+  { id: 'settings' as TabId, label: 'Ayarlar', icon: Settings },
 ];
 
 export function TabBar({ activeTab, onTabChange }: TabBarProps) {
@@ -22,6 +23,7 @@ export function TabBar({ activeTab, onTabChange }: TabBarProps) {
         return (
           <button
             key={tab.id}
+            type="button"
             onClick={() => onTabChange(tab.id)}
             className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 transition-colors ${
               isActive

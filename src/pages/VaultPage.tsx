@@ -26,13 +26,15 @@ export function VaultPage() {
       <TotalVaultCard
         totalValue={totals.totalValue}
         totalCost={totals.totalCost}
-        totalProfitLoss={totals.totalProfitLoss}
-        totalProfitLossPercent={totals.totalProfitLossPercent}
+        totalRealizedPL={totals.totalRealizedPL}
+        totalUnrealizedPL={totals.totalUnrealizedPL}
+        totalPL={totals.totalPL}
+        totalPLPercent={totals.totalPLPercent}
       />
       <LiveRatesBar />
       <div className="px-4 mt-4">
         <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-          Varlıklarım
+          Varlıklarım ({summaries.length} kalem)
         </h3>
         <div className="space-y-3">
           {summaries.map((summary) => (

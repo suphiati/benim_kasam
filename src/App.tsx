@@ -6,6 +6,7 @@ import { TabBar, type TabId } from './components/layout/TabBar';
 import { VaultPage } from './pages/VaultPage';
 import { AddTransactionPage } from './pages/AddTransactionPage';
 import { TransactionsPage } from './pages/TransactionsPage';
+import { SettingsPage } from './pages/SettingsPage';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabId>('vault');
@@ -33,6 +34,7 @@ export default function App() {
         {activeTab === 'vault' && <VaultPage />}
         {activeTab === 'add' && <AddTransactionPage />}
         {activeTab === 'transactions' && <TransactionsPage />}
+        {activeTab === 'settings' && <SettingsPage />}
       </main>
       <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
     </>

@@ -15,6 +15,8 @@ interface VaultState {
   deleteTransaction: (id: string) => Promise<void>;
   editTransaction: (id: string, updates: Partial<Omit<Transaction, 'id' | 'createdAt'>>) => Promise<void>;
   refreshRates: () => Promise<void>;
+  exportData: () => string;
+  importData: (json: string) => Promise<void>;
 }
 
 export const useVaultStore = create<VaultState>((set, get) => ({
@@ -69,5 +71,25 @@ export const useVaultStore = create<VaultState>((set, get) => ({
       lastRateUpdate: rates.length > 0 ? new Date().toISOString() : get().lastRateUpdate,
       isLoadingRates: false,
     });
+  },
+
+  exportData: () => {
+    const { transactions } = get();
+    return JSON.stringify({
+      version: 1,
+      exportDate: new Date().toISOString(),
+      transactions,
+    }, null, 2);
+  },
+
+  importData: async (json: string) => {
+    const data = JSON.parse(json);
+    const txs: Transaction[] = data.transactions || [];
+    for (const tx of txs) {
+      if (!tx.type) tx.type = 'buy';
+      await db.addTransaction(tx);
+    }
+    const all = await db.getAllTransactions();
+    set({ transactions: all });
   },
 }));

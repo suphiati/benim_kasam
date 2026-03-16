@@ -1,28 +1,21 @@
 import type { LiveRate, AssetType } from '../types';
-
-const TRUNCGIL_KEY_MAP: Record<string, AssetType> = {
-  'Dolar': 'USD',
-  'Euro': 'EUR',
-  'Gram Altın': 'GRAM_ALTIN',
-  'Çeyrek Altın': 'CEYREK_ALTIN',
-  'Yarım Altın': 'YARIM_ALTIN',
-  'Tam Altın': 'TAM_ALTIN',
-};
+import { ASSET_CONFIG, ASSET_TYPES } from '../constants/assets';
 
 function parsePrice(val: string | number): number {
   if (typeof val === 'number') return val;
   return parseFloat(val.replace('.', '').replace(',', '.')) || 0;
 }
 
-export function mapTruncgilResponse(data: Record<string, Record<string, string>>): LiveRate[] {
+export function mapTruncgilResponse(data: Record<string, Record<string, string | number>>): LiveRate[] {
   const rates: LiveRate[] = [];
-  for (const [key, assetType] of Object.entries(TRUNCGIL_KEY_MAP)) {
-    const item = data[key];
+  for (const assetType of ASSET_TYPES) {
+    const config = ASSET_CONFIG[assetType];
+    const item = data[config.truncgilKey];
     if (item) {
       rates.push({
-        assetType,
-        buyPrice: parsePrice(item['Alış'] || item['alis'] || '0'),
-        sellPrice: parsePrice(item['Satış'] || item['satis'] || '0'),
+        assetType: assetType as AssetType,
+        buyPrice: parsePrice(item['Buying'] || '0'),
+        sellPrice: parsePrice(item['Selling'] || '0'),
       });
     }
   }

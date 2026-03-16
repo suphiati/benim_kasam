@@ -1,4 +1,4 @@
-import { TrendingUp, TrendingDown } from 'lucide-react';
+import { TrendingUp, TrendingDown, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
 import type { AssetSummary } from '../../types';
 import { ASSET_CONFIG } from '../../constants/assets';
 import { formatCurrency, formatNumber, formatPercent } from '../../utils/formatters';
@@ -9,7 +9,7 @@ interface AssetSummaryCardProps {
 
 export function AssetSummaryCard({ summary }: AssetSummaryCardProps) {
   const config = ASSET_CONFIG[summary.assetType];
-  const isProfit = summary.profitLoss >= 0;
+  const isProfit = summary.totalPL >= 0;
 
   return (
     <div className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
@@ -19,7 +19,7 @@ export function AssetSummaryCard({ summary }: AssetSummaryCardProps) {
             className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
             style={{ backgroundColor: config.color }}
           >
-            {config.unit === '$' ? '$' : config.unit === '€' ? '€' : 'Au'}
+            {config.category === 'gold' ? 'Au' : config.category === 'commodity' ? 'Ag' : config.unit.substring(0, 2)}
           </div>
           <div>
             <p className="text-sm font-semibold text-gray-900">{config.label}</p>
@@ -36,7 +36,7 @@ export function AssetSummaryCard({ summary }: AssetSummaryCardProps) {
               <TrendingDown size={14} className="text-red-600" />
             )}
             <span className={`text-sm font-bold ${isProfit ? 'text-green-600' : 'text-red-600'}`}>
-              {formatPercent(summary.profitLossPercent)}
+              {formatPercent(summary.unrealizedPLPercent)}
             </span>
           </div>
         </div>
@@ -61,11 +61,33 @@ export function AssetSummaryCard({ summary }: AssetSummaryCardProps) {
         </div>
       </div>
 
-      <div className={`mt-3 pt-2 border-t border-gray-100 flex justify-between items-center text-sm`}>
-        <span className="text-gray-500">Kar / Zarar</span>
-        <span className={`font-bold ${isProfit ? 'text-green-600' : 'text-red-600'}`}>
-          {formatCurrency(summary.profitLoss)}
-        </span>
+      {/* İşlem sayıları */}
+      <div className="flex gap-3 mt-2 text-[10px] text-gray-400">
+        <div className="flex items-center gap-1">
+          <ArrowDownCircle size={10} className="text-green-500" />
+          {summary.buyCount} alım ({formatNumber(summary.totalBought)} {config.unit})
+        </div>
+        {summary.sellCount > 0 && (
+          <div className="flex items-center gap-1">
+            <ArrowUpCircle size={10} className="text-red-500" />
+            {summary.sellCount} satım ({formatNumber(summary.totalSold)} {config.unit})
+          </div>
+        )}
+      </div>
+
+      <div className="mt-3 pt-2 border-t border-gray-100">
+        <div className="flex justify-between items-center text-sm">
+          <span className="text-gray-500">Toplam K/Z</span>
+          <span className={`font-bold ${isProfit ? 'text-green-600' : 'text-red-600'}`}>
+            {formatCurrency(summary.totalPL)}
+          </span>
+        </div>
+        {summary.realizedPL !== 0 && (
+          <div className="flex justify-between items-center text-[10px] mt-1">
+            <span className="text-gray-400">Gerçekleşen: {formatCurrency(summary.realizedPL)}</span>
+            <span className="text-gray-400">Gerçekleşmemiş: {formatCurrency(summary.unrealizedPL)}</span>
+          </div>
+        )}
       </div>
     </div>
   );

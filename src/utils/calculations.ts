@@ -8,25 +8,43 @@ export function computeAssetSummary(
   const filtered = transactions.filter((t) => t.assetType === assetType);
   if (filtered.length === 0) return null;
 
-  const totalAmount = filtered.reduce((sum, t) => sum + t.amount, 0);
-  const totalCost = filtered.reduce((sum, t) => sum + t.totalCost, 0);
-  const avgUnitPrice = totalCost / totalAmount;
+  const buys = filtered.filter((t) => t.type === 'buy' || !t.type);
+  const sells = filtered.filter((t) => t.type === 'sell');
+
+  const totalBought = buys.reduce((sum, t) => sum + t.amount, 0);
+  const totalSold = sells.reduce((sum, t) => sum + t.amount, 0);
+  const totalAmount = totalBought - totalSold;
+
+  const totalCost = buys.reduce((sum, t) => sum + t.totalCost, 0);
+  const totalSellRevenue = sells.reduce((sum, t) => sum + t.totalCost, 0);
+
+  const avgUnitPrice = totalBought > 0 ? totalCost / totalBought : 0;
+  const realizedPL = totalSold > 0 ? totalSellRevenue - (avgUnitPrice * totalSold) : 0;
 
   const rate = liveRates.find((r) => r.assetType === assetType);
   const currentUnitPrice = rate?.sellPrice ?? 0;
   const currentValue = totalAmount * currentUnitPrice;
-  const profitLoss = currentValue - totalCost;
-  const profitLossPercent = totalCost > 0 ? (profitLoss / totalCost) * 100 : 0;
+  const remainingCost = totalAmount * avgUnitPrice;
+  const unrealizedPL = currentValue - remainingCost;
+  const unrealizedPLPercent = remainingCost > 0 ? (unrealizedPL / remainingCost) * 100 : 0;
+  const totalPL = realizedPL + unrealizedPL;
 
   return {
     assetType,
     totalAmount,
+    totalBought,
+    totalSold,
     totalCost,
+    totalSellRevenue,
+    realizedPL,
     avgUnitPrice,
     currentUnitPrice,
     currentValue,
-    profitLoss,
-    profitLossPercent,
+    unrealizedPL,
+    unrealizedPLPercent,
+    totalPL,
+    buyCount: buys.length,
+    sellCount: sells.length,
   };
 }
 
@@ -43,8 +61,12 @@ export function computeAllSummaries(
 export function computeTotalVault(summaries: AssetSummary[]) {
   const totalCost = summaries.reduce((sum, s) => sum + s.totalCost, 0);
   const totalValue = summaries.reduce((sum, s) => sum + s.currentValue, 0);
-  const totalProfitLoss = totalValue - totalCost;
-  const totalProfitLossPercent = totalCost > 0 ? (totalProfitLoss / totalCost) * 100 : 0;
+  const totalSellRevenue = summaries.reduce((sum, s) => sum + s.totalSellRevenue, 0);
+  const totalRealizedPL = summaries.reduce((sum, s) => sum + s.realizedPL, 0);
+  const totalUnrealizedPL = summaries.reduce((sum, s) => sum + s.unrealizedPL, 0);
+  const totalPL = totalRealizedPL + totalUnrealizedPL;
+  const remainingCost = summaries.reduce((sum, s) => sum + (s.totalAmount * s.avgUnitPrice), 0);
+  const totalPLPercent = remainingCost > 0 ? (totalUnrealizedPL / remainingCost) * 100 : 0;
 
-  return { totalCost, totalValue, totalProfitLoss, totalProfitLossPercent };
+  return { totalCost, totalValue, totalSellRevenue, totalRealizedPL, totalUnrealizedPL, totalPL, totalPLPercent };
 }
