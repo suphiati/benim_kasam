@@ -17,6 +17,7 @@ interface VaultState {
   refreshRates: () => Promise<void>;
   exportData: () => string;
   importData: (json: string) => Promise<void>;
+  mergeTransactions: (incoming: Transaction[]) => Promise<{ added: number; skipped: number }>;
 }
 
 export const useVaultStore = create<VaultState>((set, get) => ({
@@ -91,5 +92,22 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     }
     const all = await db.getAllTransactions();
     set({ transactions: all });
+  },
+
+  mergeTransactions: async (incoming) => {
+    const existingIds = new Set(get().transactions.map((t) => t.id));
+    let added = 0;
+    let skipped = 0;
+    for (const tx of incoming) {
+      if (existingIds.has(tx.id)) {
+        skipped++;
+      } else {
+        await db.addTransaction(tx);
+        added++;
+      }
+    }
+    const all = await db.getAllTransactions();
+    set({ transactions: all });
+    return { added, skipped };
   },
 }));
