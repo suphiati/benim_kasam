@@ -1,28 +1,25 @@
 import { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
-import { X, CheckCircle, AlertCircle, Camera } from 'lucide-react';
-import { decodeTransactions } from '../../utils/qrDataCodec';
-import { useVaultStore } from '../../store/vaultStore';
+import { X, CheckCircle, AlertCircle, Camera, Loader2 } from 'lucide-react';
 
 interface QrScanModalProps {
   onClose: () => void;
+  onConnect: (vaultId: string) => void;
 }
 
 type ScanState =
   | { status: 'scanning' }
-  | { status: 'success'; added: number; skipped: number }
+  | { status: 'connecting' }
+  | { status: 'success'; vaultId: string }
   | { status: 'error'; message: string };
 
-export function QrScanModal({ onClose }: QrScanModalProps) {
-  const mergeTransactions = useVaultStore((s) => s.mergeTransactions);
+export function QrScanModal({ onClose, onConnect }: QrScanModalProps) {
   const [state, setState] = useState<ScanState>({ status: 'scanning' });
-  const scannerRef = useRef<Html5Qrcode | null>(null);
   const processedRef = useRef(false);
 
   useEffect(() => {
     const readerId = 'qr-reader';
     const scanner = new Html5Qrcode(readerId);
-    scannerRef.current = scanner;
 
     scanner
       .start(
@@ -39,15 +36,19 @@ export function QrScanModal({ onClose }: QrScanModalProps) {
           }
 
           try {
-            const transactions = decodeTransactions(decodedText);
-            const result = await mergeTransactions(transactions);
-            setState({ status: 'success', added: result.added, skipped: result.skipped });
+            const data = JSON.parse(decodedText);
+            if (data.v !== 1 || !data.vault) {
+              throw new Error('Invalid format');
+            }
+            setState({ status: 'connecting' });
+            onConnect(data.vault);
+            setState({ status: 'success', vaultId: data.vault });
           } catch {
             setState({ status: 'error', message: 'Geçersiz QR kodu. BenimKasam QR kodu olduğundan emin olun.' });
           }
         },
         () => {
-          // scan error (no QR found in frame) - ignore
+          // no QR found in frame - ignore
         },
       )
       .catch(() => {
@@ -60,7 +61,7 @@ export function QrScanModal({ onClose }: QrScanModalProps) {
     return () => {
       scanner.stop().catch(() => {});
     };
-  }, [mergeTransactions]);
+  }, [onConnect]);
 
   return (
     <div className="fixed inset-0 bg-black/90 flex flex-col items-center justify-center z-[100]">
@@ -89,14 +90,20 @@ export function QrScanModal({ onClose }: QrScanModalProps) {
         </>
       )}
 
+      {state.status === 'connecting' && (
+        <div className="bg-white rounded-2xl p-6 mx-4 max-w-sm w-full text-center">
+          <Loader2 size={48} className="text-vault-600 animate-spin mx-auto mb-3" />
+          <h3 className="text-lg font-bold text-gray-900 mb-2">Bağlanıyor...</h3>
+          <p className="text-sm text-gray-600">Veriler senkronize ediliyor</p>
+        </div>
+      )}
+
       {state.status === 'success' && (
         <div className="bg-white rounded-2xl p-6 mx-4 max-w-sm w-full text-center">
           <CheckCircle size={48} className="text-green-500 mx-auto mb-3" />
-          <h3 className="text-lg font-bold text-gray-900 mb-2">Aktarım Başarılı!</h3>
+          <h3 className="text-lg font-bold text-gray-900 mb-2">Eşleştirme Başarılı!</h3>
           <p className="text-sm text-gray-600">
-            {state.added > 0 && <>{state.added} yeni işlem eklendi.<br /></>}
-            {state.skipped > 0 && <>{state.skipped} işlem zaten mevcut (atlandı).</>}
-            {state.added === 0 && state.skipped > 0 && 'Tüm işlemler zaten mevcut.'}
+            Cihazlar senkronize edildi. Artık yapılan değişiklikler otomatik olarak diğer cihaza aktarılacak.
           </p>
           <button
             onClick={onClose}

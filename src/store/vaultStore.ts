@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { Transaction, LiveRate } from '../types';
 import * as db from '../db/indexedDb';
 import { fetchLiveRates } from '../services/rateService';
+import { syncService } from '../services/firebaseSyncService';
 
 interface VaultState {
   transactions: Transaction[];
@@ -18,6 +19,9 @@ interface VaultState {
   exportData: () => string;
   importData: (json: string) => Promise<void>;
   mergeTransactions: (incoming: Transaction[]) => Promise<{ added: number; skipped: number }>;
+  applyRemoteAdd: (tx: Transaction) => Promise<void>;
+  applyRemoteUpdate: (tx: Transaction) => Promise<void>;
+  applyRemoteDelete: (id: string) => Promise<void>;
 }
 
 export const useVaultStore = create<VaultState>((set, get) => ({
@@ -43,11 +47,13 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     };
     await db.addTransaction(tx);
     set((s) => ({ transactions: [...s.transactions, tx] }));
+    syncService.pushTransaction(tx);
   },
 
   deleteTransaction: async (id) => {
     await db.deleteTransaction(id);
     set((s) => ({ transactions: s.transactions.filter((t) => t.id !== id) }));
+    syncService.pushTransactionDelete(id);
   },
 
   editTransaction: async (id, updates) => {
@@ -62,6 +68,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     set((s) => ({
       transactions: s.transactions.map((t) => (t.id === id ? updated : t)),
     }));
+    syncService.pushTransactionUpdate(updated);
   },
 
   refreshRates: async () => {
@@ -109,5 +116,27 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     const all = await db.getAllTransactions();
     set({ transactions: all });
     return { added, skipped };
+  },
+
+  // Remote actions - no Firebase push (prevents loop)
+  applyRemoteAdd: async (tx) => {
+    const exists = get().transactions.some((t) => t.id === tx.id);
+    if (exists) return;
+    await db.addTransaction(tx);
+    set((s) => ({ transactions: [...s.transactions, tx] }));
+  },
+
+  applyRemoteUpdate: async (tx) => {
+    await db.updateTransaction(tx);
+    set((s) => ({
+      transactions: s.transactions.some((t) => t.id === tx.id)
+        ? s.transactions.map((t) => (t.id === tx.id ? tx : t))
+        : [...s.transactions, tx],
+    }));
+  },
+
+  applyRemoteDelete: async (id) => {
+    await db.deleteTransaction(id);
+    set((s) => ({ transactions: s.transactions.filter((t) => t.id !== id) }));
   },
 }));

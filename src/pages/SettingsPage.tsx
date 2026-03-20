@@ -1,17 +1,26 @@
 import { useRef } from 'react';
 import { useVaultStore } from '../store/vaultStore';
-import { Download, Upload, Trash2, Smartphone } from 'lucide-react';
+import { Download, Upload, Trash2, Smartphone, Wifi, WifiOff, Unlink } from 'lucide-react';
 import { useState } from 'react';
 import { ConfirmModal } from '../components/common/ConfirmModal';
+import { syncService } from '../services/firebaseSyncService';
 
-export function SettingsPage() {
+interface SettingsPageProps {
+  isConnected: boolean;
+  onDisconnect: () => void;
+}
+
+export function SettingsPage({ isConnected, onDisconnect }: SettingsPageProps) {
   const exportData = useVaultStore((s) => s.exportData);
   const importData = useVaultStore((s) => s.importData);
   const transactions = useVaultStore((s) => s.transactions);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
   const [importStatus, setImportStatus] = useState<string | null>(null);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+
+  const vaultId = syncService.getVaultId();
 
   // PWA install prompt
   useState(() => {
@@ -57,6 +66,11 @@ export function SettingsPage() {
     setShowClearConfirm(false);
   };
 
+  const handleDisconnect = () => {
+    onDisconnect();
+    setShowDisconnectConfirm(false);
+  };
+
   const handleInstall = async () => {
     if (!deferredPrompt) return;
     await deferredPrompt.prompt();
@@ -85,6 +99,47 @@ export function SettingsPage() {
                 Yükle
               </button>
             </div>
+          </div>
+        )}
+
+        {/* Senkronizasyon */}
+        {vaultId && (
+          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+            <div className="p-4 border-b border-gray-100">
+              <h3 className="font-semibold text-gray-900">Senkronizasyon</h3>
+              <div className="flex items-center gap-2 mt-1">
+                {isConnected ? (
+                  <>
+                    <Wifi size={14} className="text-green-500" />
+                    <p className="text-xs text-green-600">Bağlı - Otomatik senkronizasyon aktif</p>
+                  </>
+                ) : (
+                  <>
+                    <WifiOff size={14} className="text-gray-400" />
+                    <p className="text-xs text-gray-500">Bağlantı kurulamadı</p>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="px-4 py-3 border-b border-gray-50">
+              <p className="text-xs text-gray-500">Kasa ID</p>
+              <p className="text-sm font-mono text-gray-700 mt-0.5">
+                {vaultId.slice(0, 8)}...{vaultId.slice(-4)}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowDisconnectConfirm(true)}
+              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 transition-colors text-left"
+            >
+              <Unlink size={20} className="text-red-500" />
+              <div>
+                <p className="text-sm font-medium text-red-600">Eşleştirmeyi Kaldır</p>
+                <p className="text-xs text-gray-500">Cihazlar arası senkronizasyonu durdur</p>
+              </div>
+            </button>
           </div>
         )}
 
@@ -149,7 +204,7 @@ export function SettingsPage() {
         <div className="bg-white border border-gray-200 rounded-xl p-4 text-center">
           <p className="font-bold text-vault-800 text-lg">BenimKasam</p>
           <p className="text-xs text-gray-400 mt-1">Kişisel Kasa Takip Uygulaması</p>
-          <p className="text-[10px] text-gray-300 mt-2">v1.0.0</p>
+          <p className="text-[10px] text-gray-300 mt-2">v1.1.0</p>
         </div>
       </div>
 
@@ -160,6 +215,16 @@ export function SettingsPage() {
           confirmLabel="Hepsini Sil"
           onConfirm={handleClearAll}
           onCancel={() => setShowClearConfirm(false)}
+        />
+      )}
+
+      {showDisconnectConfirm && (
+        <ConfirmModal
+          title="Eşleştirmeyi Kaldır"
+          message="Cihazlar arası otomatik senkronizasyon durdurulacak. Yerel verileriniz silinmez."
+          confirmLabel="Kaldır"
+          onConfirm={handleDisconnect}
+          onCancel={() => setShowDisconnectConfirm(false)}
         />
       )}
     </div>

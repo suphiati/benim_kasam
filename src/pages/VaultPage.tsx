@@ -6,31 +6,33 @@ import { LiveRatesBar } from '../components/vault/LiveRatesBar';
 import { AssetSummaryCard } from '../components/vault/AssetSummaryCard';
 import { QrGenerateModal } from '../components/qr/QrGenerateModal';
 import { QrScanModal } from '../components/qr/QrScanModal';
-import { Vault, QrCode, ScanLine } from 'lucide-react';
+import { Vault, QrCode, ScanLine, Wifi, WifiOff } from 'lucide-react';
 import { InstallGuide } from '../components/common/InstallGuide';
+import { syncService } from '../services/firebaseSyncService';
 
-export function VaultPage() {
+interface VaultPageProps {
+  isConnected: boolean;
+  onConnect: (vaultId: string) => void;
+}
+
+export function VaultPage({ isConnected, onConnect }: VaultPageProps) {
   const transactions = useVaultStore((s) => s.transactions);
-  const exportData = useVaultStore((s) => s.exportData);
   const { summaries, totals } = useAssetSummaries();
   const [showQrGenerate, setShowQrGenerate] = useState(false);
   const [showQrScan, setShowQrScan] = useState(false);
 
-  const handleExportFallback = () => {
-    const json = exportData();
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `benim-kasam-yedek-${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+  const syncBadge = syncService.getVaultId() ? (
+    <div className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full ${isConnected ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
+      {isConnected ? <Wifi size={12} /> : <WifiOff size={12} />}
+      {isConnected ? 'Senkron' : 'Bağlantı yok'}
+    </div>
+  ) : null;
 
   if (transactions.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
         <InstallGuide />
+        {syncBadge && <div className="mb-2">{syncBadge}</div>}
         <Vault size={64} className="text-gray-300 mb-4 mt-4" />
         <h2 className="text-lg font-semibold text-gray-500 mb-1">Kasanız Boş</h2>
         <p className="text-sm text-gray-400">
@@ -43,7 +45,12 @@ export function VaultPage() {
           <ScanLine size={18} />
           QR Oku
         </button>
-        {showQrScan && <QrScanModal onClose={() => setShowQrScan(false)} />}
+        {showQrScan && (
+          <QrScanModal
+            onClose={() => setShowQrScan(false)}
+            onConnect={onConnect}
+          />
+        )}
       </div>
     );
   }
@@ -75,13 +82,19 @@ export function VaultPage() {
           QR Oku
         </button>
       </div>
+      {syncBadge && <div className="flex justify-center mt-2">{syncBadge}</div>}
       {showQrGenerate && (
         <QrGenerateModal
           onClose={() => setShowQrGenerate(false)}
-          onExportFallback={handleExportFallback}
+          onConnect={onConnect}
         />
       )}
-      {showQrScan && <QrScanModal onClose={() => setShowQrScan(false)} />}
+      {showQrScan && (
+        <QrScanModal
+          onClose={() => setShowQrScan(false)}
+          onConnect={onConnect}
+        />
+      )}
       <LiveRatesBar />
       <div className="px-4 mt-4">
         <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
