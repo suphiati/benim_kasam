@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.suphiatilim.benimkasam",
+    "sha256_cert_fingerprints": ["A7:53:B0:DD:CF:14:67:01:AC:14:05:8E:FB:F5:69:EB:08:BC:BE:9F:3A:D6:FF:2B:27:32:CA:91:0A:66:8B:E6"]
+  }
+}]
