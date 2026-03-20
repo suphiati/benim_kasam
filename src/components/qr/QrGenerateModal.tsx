@@ -44,7 +44,7 @@ export function QrGenerateModal({ onClose, onExportFallback }: QrGenerateModalPr
         {qrData ? (
           <>
             <div className="flex justify-center p-4 bg-white rounded-xl border border-gray-100">
-              <QRCodeSVG value={qrData} size={240} level="L" />
+              <QRCodeSVG value={qrData} size={280} level="M" />
             </div>
             <p className="text-center text-sm text-gray-500 mt-3">
               {txCount} işlem kodlandı

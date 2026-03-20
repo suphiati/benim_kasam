@@ -1,7 +1,8 @@
 import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from 'lz-string';
 import type { Transaction, TransactionType } from '../types';
 
-const QR_MAX_ALPHANUMERIC = 4296;
+// QR Version 40, Error Correction Level M: max 3391 alphanumeric chars
+const QR_MAX_ALPHANUMERIC = 3391;
 const VERSION_PREFIX = '1:';
 
 interface MinifiedTransaction {

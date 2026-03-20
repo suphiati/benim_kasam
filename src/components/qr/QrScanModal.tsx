@@ -27,7 +27,7 @@ export function QrScanModal({ onClose }: QrScanModalProps) {
     scanner
       .start(
         { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
+        { fps: 5, qrbox: { width: 280, height: 280 }, aspectRatio: 1 },
         async (decodedText) => {
           if (processedRef.current) return;
           processedRef.current = true;
@@ -78,7 +78,7 @@ export function QrScanModal({ onClose }: QrScanModalProps) {
           </div>
           <div
             id="qr-reader"
-            className="w-[300px] h-[300px] overflow-hidden rounded-2xl"
+            className="w-[320px] h-[320px] overflow-hidden rounded-2xl"
           />
           <button
             onClick={onClose}
