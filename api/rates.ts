@@ -162,14 +162,35 @@ async function fetchGenelParaCurrency(): Promise<Record<string, RateItem>> {
   return rates;
 }
 
-// Kaynak 3 (Döviz - Son çare): Truncgil API
+// Kaynak 3 (Döviz + Altın yedek): Truncgil API
 async function fetchTruncgil(): Promise<{ data: Record<string, RateItem>; timestamp: string }> {
   const res = await fetch('https://finans.truncgil.com/v4/today.json', {
     headers: { 'User-Agent': 'BenimKasam/1.0' },
   });
   if (!res.ok) throw new Error(`Truncgil HTTP ${res.status}`);
-  const data = await res.json();
-  return { data, timestamp: data.Update_Date || new Date().toISOString() };
+  const text = await res.text();
+  // Truncgil bazen bozuk JSON döndürüyor, toleranslı parse
+  let data: Record<string, unknown>;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    // Bozuk JSON'u kurtarmaya çalış - son geçerli '}'ye kadar kes
+    const lastBrace = text.lastIndexOf('}');
+    if (lastBrace > 0) {
+      // İç içe objeleri kapatmak için eksik '}'leri ekle
+      let truncated = text.substring(0, lastBrace + 1);
+      // Açık kalan objeleri kapat
+      const openBraces = (truncated.match(/\{/g) || []).length;
+      const closeBraces = (truncated.match(/\}/g) || []).length;
+      for (let i = 0; i < openBraces - closeBraces; i++) {
+        truncated += '}';
+      }
+      data = JSON.parse(truncated);
+    } else {
+      throw new Error('Truncgil JSON completely invalid');
+    }
+  }
+  return { data: data as Record<string, RateItem>, timestamp: (data.Update_Date as string) || new Date().toISOString() };
 }
 
 // Kaynak 4 (Döviz - Fallback): ExchangeRate API (mid-rate)
