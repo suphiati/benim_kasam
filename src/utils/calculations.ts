@@ -65,8 +65,8 @@ export function computeTotalVault(summaries: AssetSummary[]) {
   const totalRealizedPL = summaries.reduce((sum, s) => sum + s.realizedPL, 0);
   const totalUnrealizedPL = summaries.reduce((sum, s) => sum + s.unrealizedPL, 0);
   const totalPL = totalRealizedPL + totalUnrealizedPL;
-  const remainingCost = summaries.reduce((sum, s) => sum + (s.totalAmount * s.avgUnitPrice), 0);
-  const totalPLPercent = remainingCost > 0 ? (totalUnrealizedPL / remainingCost) * 100 : 0;
+  const netInvestment = totalCost - totalSellRevenue;
+  const totalPLPercent = netInvestment > 0 ? (totalPL / netInvestment) * 100 : 0;
 
   return { totalCost, totalValue, totalSellRevenue, totalRealizedPL, totalUnrealizedPL, totalPL, totalPLPercent };
 }

@@ -32,8 +32,8 @@ export function mapTruncgilResponse(data: Record<string, unknown>): RatesWithMet
       const buyPrice = parsePrice(item['Buying'] || '0');
       const sellPrice = parsePrice(item['Selling'] || '0');
 
-      // Fiyat doğrulama: 0 veya negatif fiyatları atla
-      if (buyPrice > 0 && sellPrice > 0) {
+      // Fiyat doğrulama: 0/negatif ve ters spread kontrolü
+      if (buyPrice > 0 && sellPrice > 0 && sellPrice >= buyPrice) {
         rates.push({
           assetType: assetType as AssetType,
           buyPrice,
