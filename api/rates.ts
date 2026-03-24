@@ -8,7 +8,11 @@ interface RateItem {
 
 function parseNum(val: string | number): number {
   if (typeof val === 'number') return val;
-  return parseFloat(val.replace(/\./g, '').replace(',', '.')) || 0;
+  // Virgül varsa Türkçe format (1.234,56), yoksa standart format (1234.56)
+  if (val.includes(',')) {
+    return parseFloat(val.replace(/\./g, '').replace(',', '.')) || 0;
+  }
+  return parseFloat(val) || 0;
 }
 
 function pricesClose(a: number, b: number, tolerancePct: number): boolean {
@@ -213,6 +217,16 @@ export default async function handler(_req: VercelRequest, res: VercelResponse) 
       fetchExchangeRateAPI(),
     ]);
 
+    // Hata logla
+    const failures: string[] = [];
+    if (genelParaGoldResult.status === 'rejected') failures.push(`genelpara-gold: ${genelParaGoldResult.reason}`);
+    if (bigParaGoldResult.status === 'rejected') failures.push(`bigpara-gold: ${bigParaGoldResult.reason}`);
+    if (bigParaCurrResult.status === 'rejected') failures.push(`bigpara-currency: ${bigParaCurrResult.reason}`);
+    if (genelParaCurrResult.status === 'rejected') failures.push(`genelpara-currency: ${genelParaCurrResult.reason}`);
+    if (truncgilResult.status === 'rejected') failures.push(`truncgil: ${truncgilResult.reason}`);
+    if (exchangeResult.status === 'rejected') failures.push(`exchangerate: ${exchangeResult.reason}`);
+    if (failures.length > 0) console.warn('Failed sources:', failures.join(' | '));
+
     // ========== ALTIN ==========
     // Birincil: GenelPara (Kapalıçarşı fiyatları)
     if (genelParaGoldResult.status === 'fulfilled') {
@@ -314,6 +328,7 @@ export default async function handler(_req: VercelRequest, res: VercelResponse) 
       ...finalData,
       _meta: {
         sources,
+        failures,
         timestamp,
         fetchedAt: new Date().toISOString(),
       },

@@ -3,7 +3,11 @@ import { ASSET_CONFIG, ASSET_TYPES } from '../constants/assets';
 
 function parsePrice(val: string | number): number {
   if (typeof val === 'number') return val;
-  return parseFloat(val.replace(/\./g, '').replace(',', '.')) || 0;
+  // Virgül varsa Türkçe format (1.234,56), yoksa standart format (1234.56)
+  if (val.includes(',')) {
+    return parseFloat(val.replace(/\./g, '').replace(',', '.')) || 0;
+  }
+  return parseFloat(val) || 0;
 }
 
 export interface RatesMeta {
