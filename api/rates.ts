@@ -46,14 +46,15 @@ async function fetchGenelParaGold(): Promise<Record<string, RateItem>> {
     'GAG': 'GUMUS',        // Gümüş
   };
 
+  const goldData = json?.data || json;
   if (json?.success !== false) {
     for (const [symbol, mappedKey] of Object.entries(keyMap)) {
-      const item = json[symbol];
+      const item = goldData[symbol];
       if (item) {
         const buying = parseNum(item.alis || '0');
         const selling = parseNum(item.satis || '0');
         if (validRate(buying, selling)) {
-          rates[mappedKey] = { Buying: buying.toFixed(4), Selling: selling.toFixed(4), Type: 'Gold' };
+          rates[mappedKey] = { Buying: buying, Selling: selling, Type: 'Gold' };
         }
       }
     }
@@ -93,7 +94,7 @@ async function fetchBigParaGold(): Promise<Record<string, RateItem>> {
         const buying = parseNum(item.buying || item.alis || '0');
         const selling = parseNum(item.selling || item.satis || '0');
         if (validRate(buying, selling)) {
-          rates[mappedKey] = { Buying: buying.toFixed(4), Selling: selling.toFixed(4), Type: 'Gold' };
+          rates[mappedKey] = { Buying: buying, Selling: selling, Type: 'Gold' };
         }
       }
     }
@@ -125,7 +126,7 @@ async function fetchBigParaCurrency(): Promise<Record<string, RateItem>> {
         const buying = parseNum(item.buying || item.alis || '0');
         const selling = parseNum(item.selling || item.satis || '0');
         if (validRate(buying, selling)) {
-          rates[code] = { Buying: buying.toFixed(4), Selling: selling.toFixed(4), Type: 'Currency' };
+          rates[code] = { Buying: buying, Selling: selling, Type: 'Currency' };
         }
       }
     }
@@ -142,14 +143,15 @@ async function fetchGenelParaCurrency(): Promise<Record<string, RateItem>> {
   const json = await res.json();
   const rates: Record<string, RateItem> = {};
 
+  const currData = json?.data || json;
   const symbols = ['USD', 'EUR', 'GBP', 'CHF'];
   for (const sym of symbols) {
-    const item = json[sym];
+    const item = currData[sym];
     if (item) {
       const buying = parseNum(item.alis || '0');
       const selling = parseNum(item.satis || '0');
       if (validRate(buying, selling)) {
-        rates[sym] = { Buying: buying.toFixed(4), Selling: selling.toFixed(4), Type: 'Currency' };
+        rates[sym] = { Buying: buying, Selling: selling, Type: 'Currency' };
       }
     }
   }
@@ -179,8 +181,8 @@ async function fetchExchangeRateAPI(): Promise<Record<string, RateItem>> {
       const midRate = 1 / json.rates[code];
       const spread = midRate * 0.005;
       rates[code] = {
-        Buying: (midRate - spread).toFixed(4),
-        Selling: (midRate + spread).toFixed(4),
+        Buying: midRate - spread,
+        Selling: midRate + spread,
         Type: 'Currency',
       };
     }
@@ -283,7 +285,7 @@ export default async function handler(_req: VercelRequest, res: VercelResponse) 
         const trBuy = parseNum(trItem['Buying'] || '0');
         const trSell = parseNum(trItem['Selling'] || '0');
         if (validRate(trBuy, trSell)) {
-          finalData[key] = { Buying: trBuy.toFixed(4), Selling: trSell.toFixed(4), Type: trItem['Type']?.toString() };
+          finalData[key] = { Buying: trBuy, Selling: trSell, Type: trItem['Type']?.toString() };
           trUsed = true;
         }
       }
