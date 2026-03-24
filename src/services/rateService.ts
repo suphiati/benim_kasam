@@ -1,16 +1,56 @@
 import type { LiveRate } from '../types';
-import { mapTruncgilResponse } from './apiMappers';
+import { mapTruncgilResponse, type RatesMeta } from './apiMappers';
+
+export interface FetchRatesResult {
+  rates: LiveRate[];
+  meta: RatesMeta;
+}
+
+const CACHE_KEY = 'benimkasam_rates_cache';
+const CACHE_MAX_AGE_MS = 10 * 60 * 1000; // 10 dakika
 
 function getApiUrl(): string {
-  // Production'da Vercel serverless proxy kullan (CORS sorunu yok)
-  // Development'ta dogrudan API'yi kullan
   if (window.location.hostname !== 'localhost') {
     return '/api/rates';
   }
   return 'https://finans.truncgil.com/v4/today.json';
 }
 
-async function fetchRates(): Promise<LiveRate[]> {
+// LocalStorage'a cache'le (offline fallback)
+function cacheRates(result: FetchRatesResult): void {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({
+      ...result,
+      cachedAt: Date.now(),
+    }));
+  } catch { /* ignore */ }
+}
+
+function getCachedRates(): FetchRatesResult | null {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const cached = JSON.parse(raw);
+    // 10 dakikadan eski cache'i kullanma (çok zorunlu değilse)
+    if (Date.now() - cached.cachedAt > CACHE_MAX_AGE_MS) return null;
+    return { rates: cached.rates, meta: { ...cached.meta, sources: [...cached.meta.sources, 'cache'] } };
+  } catch {
+    return null;
+  }
+}
+
+function getStaleCache(): FetchRatesResult | null {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const cached = JSON.parse(raw);
+    return { rates: cached.rates, meta: { ...cached.meta, sources: ['stale-cache'] } };
+  } catch {
+    return null;
+  }
+}
+
+async function fetchFromProxy(): Promise<FetchRatesResult> {
   const url = getApiUrl();
   const res = await fetch(url);
   if (!res.ok) throw new Error(`API error: ${res.status}`);
@@ -18,19 +58,53 @@ async function fetchRates(): Promise<LiveRate[]> {
   return mapTruncgilResponse(data);
 }
 
-export async function fetchLiveRates(): Promise<LiveRate[]> {
+async function fetchDirectTruncgil(): Promise<FetchRatesResult> {
+  const res = await fetch('https://finans.truncgil.com/v4/today.json');
+  if (!res.ok) throw new Error('Direct Truncgil failed');
+  const data = await res.json();
+  return mapTruncgilResponse(data);
+}
+
+export async function fetchLiveRates(): Promise<FetchRatesResult> {
+  // 1. Proxy'den dene (çoklu kaynak backend)
   try {
-    return await fetchRates();
-  } catch (err) {
-    console.error('Kur verileri alınamadı:', err);
-    // Fallback: dogrudan API'yi dene
-    try {
-      const res = await fetch('https://finans.truncgil.com/v4/today.json');
-      if (!res.ok) throw new Error('Fallback failed');
-      const data = await res.json();
-      return mapTruncgilResponse(data);
-    } catch {
-      return [];
+    const result = await fetchFromProxy();
+    if (result.rates.length > 0) {
+      cacheRates(result);
+      return result;
     }
+  } catch (err) {
+    console.warn('Proxy fetch failed:', err);
   }
+
+  // 2. Doğrudan Truncgil dene
+  try {
+    const result = await fetchDirectTruncgil();
+    if (result.rates.length > 0) {
+      cacheRates(result);
+      return result;
+    }
+  } catch (err) {
+    console.warn('Direct Truncgil failed:', err);
+  }
+
+  // 3. Taze cache varsa kullan
+  const cached = getCachedRates();
+  if (cached && cached.rates.length > 0) {
+    console.info('Using cached rates');
+    return cached;
+  }
+
+  // 4. Eski cache bile varsa kullan (offline durumu)
+  const stale = getStaleCache();
+  if (stale && stale.rates.length > 0) {
+    console.info('Using stale cached rates');
+    return stale;
+  }
+
+  // 5. Hiçbir şey çalışmadı
+  return {
+    rates: [],
+    meta: { sources: ['none'], timestamp: new Date().toISOString(), fetchedAt: new Date().toISOString() },
+  };
 }

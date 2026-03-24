@@ -16,6 +16,7 @@ export function Header() {
   const isLoadingRates = useVaultStore((s) => s.isLoadingRates);
   const lastRateUpdate = useVaultStore((s) => s.lastRateUpdate);
   const liveRates = useVaultStore((s) => s.liveRates);
+  const rateSources = useVaultStore((s) => s.rateSources);
   const [, setTick] = useState(0);
 
   // Her 30 saniyede "X dk önce" metnini güncelle
@@ -48,8 +49,15 @@ export function Header() {
         <div className="flex items-center gap-1 mt-1">
           <Clock size={10} className="text-vault-400" />
           <span className={`text-[10px] ${hasRates ? 'text-vault-300' : 'text-red-400'}`}>
-            {hasRates ? `Kurlar güncellendi: ${timeAgo}` : 'Kur verileri alınamadı'}
+            {hasRates
+              ? `Kurlar güncellendi: ${timeAgo}`
+              : 'Kur verileri alınamadı'}
           </span>
+          {hasRates && rateSources.length > 0 && (
+            <span className="text-[9px] text-vault-500 ml-1">
+              ({rateSources.filter(s => s !== 'cache' && s !== 'stale-cache').join('+') || 'cache'})
+            </span>
+          )}
           {!hasRates && (
             <button type="button" onClick={refreshRates} className="text-[10px] text-gold-400 underline ml-1">
               Tekrar dene

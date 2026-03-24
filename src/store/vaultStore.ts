@@ -8,6 +8,7 @@ interface VaultState {
   transactions: Transaction[];
   liveRates: LiveRate[];
   lastRateUpdate: string | null;
+  rateSources: string[];
   isLoadingRates: boolean;
   isInitialized: boolean;
 
@@ -28,6 +29,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
   transactions: [],
   liveRates: [],
   lastRateUpdate: null,
+  rateSources: [],
   isLoadingRates: false,
   isInitialized: false,
 
@@ -73,10 +75,11 @@ export const useVaultStore = create<VaultState>((set, get) => ({
 
   refreshRates: async () => {
     set({ isLoadingRates: true });
-    const rates = await fetchLiveRates();
+    const result = await fetchLiveRates();
     set({
-      liveRates: rates.length > 0 ? rates : get().liveRates,
-      lastRateUpdate: rates.length > 0 ? new Date().toISOString() : get().lastRateUpdate,
+      liveRates: result.rates.length > 0 ? result.rates : get().liveRates,
+      lastRateUpdate: result.rates.length > 0 ? new Date().toISOString() : get().lastRateUpdate,
+      rateSources: result.meta.sources,
       isLoadingRates: false,
     });
   },

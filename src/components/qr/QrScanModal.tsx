@@ -36,6 +36,7 @@ export function QrScanModal({ onClose, onConnect }: QrScanModalProps) {
           }
 
           try {
+            // Yeni format: {"v":1,"vault":"uuid"}
             const data = JSON.parse(decodedText);
             if (data.v !== 1 || !data.vault) {
               throw new Error('Invalid format');
@@ -44,7 +45,12 @@ export function QrScanModal({ onClose, onConnect }: QrScanModalProps) {
             onConnect(data.vault);
             setState({ status: 'success', vaultId: data.vault });
           } catch {
-            setState({ status: 'error', message: 'Geçersiz QR kodu. BenimKasam QR kodu olduğundan emin olun.' });
+            // Eski format olabilir (1:compressed...) veya geçersiz QR
+            if (decodedText.startsWith('1:')) {
+              setState({ status: 'error', message: 'Bu eski formatta bir QR kodu. Lütfen diğer cihazda yeni QR oluşturun.' });
+            } else {
+              setState({ status: 'error', message: 'Geçersiz QR kodu. BenimKasam QR kodu olduğundan emin olun.' });
+            }
           }
         },
         () => {
