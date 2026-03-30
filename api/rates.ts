@@ -56,49 +56,18 @@ async function fetchTruncgil(): Promise<{ data: Record<string, unknown>; timesta
 }
 
 // ============================================================
-// KAYNAK 2 (ALTIN YEDEK): Kapalıçarşı Community API
+// KAYNAK 2 (ONS YEDEK): Yahoo Finance - Altın spot fiyatı (USD/oz)
 // ============================================================
-async function fetchKapalicarsı(): Promise<Record<string, RateItem>> {
-  const res = await fetch('https://kapali-carsi-altin-api.vercel.app/', {
-    headers: { 'User-Agent': 'BenimKasam/1.0' },
-  });
-  if (!res.ok) throw new Error(`Kapalıçarşı API HTTP ${res.status}`);
-  const json = await res.json();
-  const rates: Record<string, RateItem> = {};
-
-  // Kapalıçarşı API code -> internal key mapping
-  const keyMap: Record<string, string> = {
-    'ALTIN': 'GRA',
-    'CEYREK_YENI': 'CEYREKALTIN',
-    'YARIM_YENI': 'YARIMALTIN',
-    'TEK_YENI': 'TAMALTIN',
-    'CUMHURIYET': 'CUMHURIYETALTINI',
-    'ATA_YENI': 'ATAALTIN',
-    'RESAT_YENI': 'RESATALTIN',
-    'GUMUS': 'GUMUS',
-    // Eski altın türleri de dene
-    'CEYREK_ESKI': 'CEYREKALTIN',
-    'YARIM_ESKI': 'YARIMALTIN',
-    'TEK_ESKI': 'TAMALTIN',
-    'ATA_ESKI': 'ATAALTIN',
-    'RESAT_ESKI': 'RESATALTIN',
-  };
-
-  const items = Array.isArray(json) ? json : (json.data || []);
-  for (const item of items) {
-    const code = item.code || item.name || '';
-    const mappedKey = keyMap[code];
-    if (!mappedKey) continue;
-    // Zaten varsa atla (yeni > eski önceliği)
-    if (rates[mappedKey]) continue;
-
-    const buying = parseNum(item.alis || item.buying || '0');
-    const selling = parseNum(item.satis || item.selling || '0');
-    if (validRate(buying, selling)) {
-      rates[mappedKey] = { Buying: buying, Selling: selling, Type: 'Gold' };
-    }
-  }
-  return rates;
+async function fetchYahooGold(): Promise<{ usdPerOz: number }> {
+  const res = await fetch(
+    'https://query1.finance.yahoo.com/v8/finance/chart/GC%3DF?interval=1d&range=1d',
+    { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; BenimKasam/1.0)' } },
+  );
+  if (!res.ok) throw new Error(`Yahoo Finance HTTP ${res.status}`);
+  const json = await res.json() as { chart?: { result?: Array<{ meta?: { regularMarketPrice?: number } }> } };
+  const price = json?.chart?.result?.[0]?.meta?.regularMarketPrice;
+  if (!price || price <= 0) throw new Error('Yahoo Finance: geçersiz ONS fiyatı');
+  return { usdPerOz: price };
 }
 
 // ============================================================
@@ -190,15 +159,15 @@ export default async function handler(_req: VercelRequest, res: VercelResponse) 
 
   try {
     // Tüm kaynakları paralel çek
-    const [truncgilResult, kapalicarsıResult, exchangeResult] = await Promise.allSettled([
+    const [truncgilResult, yahooResult, exchangeResult] = await Promise.allSettled([
       fetchTruncgil(),
-      fetchKapalicarsı(),
+      fetchYahooGold(),
       fetchExchangeRateAPI(),
     ]);
 
     // Hata logla
     if (truncgilResult.status === 'rejected') failures.push(`truncgil: ${truncgilResult.reason}`);
-    if (kapalicarsıResult.status === 'rejected') failures.push(`kapalıçarşı: ${kapalicarsıResult.reason}`);
+    if (yahooResult.status === 'rejected') failures.push(`yahoo: ${yahooResult.reason}`);
     if (exchangeResult.status === 'rejected') failures.push(`exchangerate: ${exchangeResult.reason}`);
     if (failures.length > 0) console.warn('Failed sources:', failures.join(' | '));
 
@@ -227,6 +196,7 @@ export default async function handler(_req: VercelRequest, res: VercelResponse) 
       }
 
       // ONS ve USD verilerini kuyumcu formülü için sakla
+      // Not: Truncgil ONS değeri genellikle 0 gelir, Yahoo Finance yedek olarak kullanılır
       const onsItem = trData['ONS'] as Record<string, string | number> | undefined;
       if (onsItem) {
         const onsBuy = parseNum(onsItem['Buying'] || '0');
@@ -247,7 +217,17 @@ export default async function handler(_req: VercelRequest, res: VercelResponse) 
       if (Object.keys(finalData).length > 0) sources.push('truncgil');
     }
 
-    // ========== 2. KUYUMCU FORMÜLÜ CROSS-CHECK ==========
+    // ========== 2. YAHOO FINANCE ONS YEDEK ==========
+    // Truncgil ONS 0 gelirse Yahoo Finance'ten gerçek spot fiyatını kullan
+    if (!onsData && yahooResult.status === 'fulfilled') {
+      const usdPerOz = yahooResult.value.usdPerOz;
+      // onsData birimi: USD/oz (kuyumcu formülü USD * USD_TRY / TROY_OUNCE kullanır)
+      const spread = usdPerOz * 0.002; // %0.2 spread
+      onsData = { buy: usdPerOz - spread, sell: usdPerOz + spread };
+      console.info(`Yahoo Finance ONS: ${usdPerOz.toFixed(2)} USD/oz`);
+    }
+
+    // ========== 3. KUYUMCU FORMÜLÜ CROSS-CHECK ==========
     if (onsData && usdData) {
       const formulaRates = calculateGoldFromFormula(onsData, usdData);
       const formulaGRA = formulaRates['GRA'];
@@ -278,21 +258,6 @@ export default async function handler(_req: VercelRequest, res: VercelResponse) 
           sources.push('formula');
         }
       }
-    }
-
-    // ========== 3. KAPALIÇARŞI (altın yedek) ==========
-    if (kapalicarsıResult.status === 'fulfilled') {
-      const kcRates = kapalicarsıResult.value;
-      const goldKeys = ['GRA', 'CEYREKALTIN', 'YARIMALTIN', 'TAMALTIN', 'CUMHURIYETALTINI', 'ATAALTIN', 'RESATALTIN', 'GUMUS'];
-      let kcUsed = false;
-
-      for (const key of goldKeys) {
-        if (!finalData[key] && kcRates[key]) {
-          finalData[key] = kcRates[key];
-          kcUsed = true;
-        }
-      }
-      if (kcUsed) sources.push('kapalıçarşı');
     }
 
     // ========== 4. EXCHANGERATE API (döviz yedek) ==========

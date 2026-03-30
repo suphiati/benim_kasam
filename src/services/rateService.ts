@@ -58,10 +58,30 @@ async function fetchFromProxy(): Promise<FetchRatesResult> {
   return mapTruncgilResponse(data);
 }
 
+// Truncgil bazen kırpılmış JSON döndürüyor - toleranslı parse (api/rates.ts ile aynı mantık)
+function safeJsonParse(text: string): Record<string, unknown> {
+  try {
+    return JSON.parse(text) as Record<string, unknown>;
+  } catch {
+    const lastBrace = text.lastIndexOf('}');
+    if (lastBrace > 0) {
+      let truncated = text.substring(0, lastBrace + 1);
+      const openBraces = (truncated.match(/\{/g) || []).length;
+      const closeBraces = (truncated.match(/\}/g) || []).length;
+      for (let i = 0; i < openBraces - closeBraces; i++) {
+        truncated += '}';
+      }
+      return JSON.parse(truncated) as Record<string, unknown>;
+    }
+    throw new Error('JSON tamamen geçersiz');
+  }
+}
+
 async function fetchDirectTruncgil(): Promise<FetchRatesResult> {
   const res = await fetch('https://finans.truncgil.com/v4/today.json');
   if (!res.ok) throw new Error('Direct Truncgil failed');
-  const data = await res.json();
+  const text = await res.text();
+  const data = safeJsonParse(text);
   return mapTruncgilResponse(data);
 }
 
