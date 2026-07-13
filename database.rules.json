@@ -17,8 +17,7 @@
             "note":       { ".validate": "newData.isString()" },
             "createdAt":  { ".validate": "newData.isString()" },
             "$other":     { ".validate": false }
-          },
-          "$other": { ".validate": false }
+          }
         },
         "$other": { ".validate": false }
       }
