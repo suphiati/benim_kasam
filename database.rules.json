@@ -1,0 +1,27 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "vaults": {
+      "$vaultId": {
+        ".read": "auth != null",
+        ".write": "auth != null",
+        "transactions": {
+          "$txId": {
+            ".validate": "newData.hasChildren(['type','assetType','date','amount','unitPrice','createdAt'])",
+            "type":       { ".validate": "newData.isString()" },
+            "assetType":  { ".validate": "newData.isString()" },
+            "date":       { ".validate": "newData.isString()" },
+            "amount":     { ".validate": "newData.isNumber()" },
+            "unitPrice":  { ".validate": "newData.isNumber()" },
+            "note":       { ".validate": "newData.isString()" },
+            "createdAt":  { ".validate": "newData.isString()" },
+            "$other":     { ".validate": false }
+          },
+          "$other": { ".validate": false }
+        },
+        "$other": { ".validate": false }
+      }
+    }
+  }
+}

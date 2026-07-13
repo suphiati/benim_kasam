@@ -1,9 +1,10 @@
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import { useVaultStore } from '../store/vaultStore';
-import { Download, Upload, Trash2, Smartphone, Wifi, WifiOff, Unlink } from 'lucide-react';
+import { Download, Upload, Trash2, Smartphone, Wifi, WifiOff, Unlink, Fingerprint } from 'lucide-react';
 import { useState } from 'react';
 import { ConfirmModal } from '../components/common/ConfirmModal';
 import { syncService } from '../services/firebaseSyncService';
+import { isNative, getBiometricStatus, isLockEnabled, setLockEnabled, authenticate } from '../services/biometric';
 
 interface SettingsPageProps {
   isConnected: boolean;
@@ -19,6 +20,30 @@ export function SettingsPage({ isConnected, onDisconnect }: SettingsPageProps) {
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
   const [importStatus, setImportStatus] = useState<string | null>(null);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+
+  // Biyometrik kilit (yalnız native)
+  const [lockSupported, setLockSupported] = useState(false);
+  const [lockEnabled, setLockEnabledState] = useState(false);
+
+  useEffect(() => {
+    if (!isNative()) return;
+    (async () => {
+      const status = await getBiometricStatus();
+      setLockSupported(status.deviceSecure);
+      setLockEnabledState(await isLockEnabled());
+    })();
+  }, []);
+
+  const handleToggleLock = async () => {
+    // Kilidi kapatmadan önce kimlik doğrula (yetkisiz kapatmayı önle)
+    if (lockEnabled) {
+      const ok = await authenticate();
+      if (!ok) return;
+    }
+    const next = !lockEnabled;
+    await setLockEnabled(next);
+    setLockEnabledState(next);
+  };
 
   const vaultId = syncService.getVaultId();
 
@@ -97,6 +122,28 @@ export function SettingsPage({ isConnected, onDisconnect }: SettingsPageProps) {
                 className="px-4 py-2 bg-vault-800 text-white rounded-lg text-sm font-medium hover:bg-vault-700 transition-colors"
               >
                 Yükle
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Biyometrik Kilit (yalnız native) */}
+        {lockSupported && (
+          <div className="bg-white border border-gray-200 rounded-xl p-4">
+            <div className="flex items-center gap-3">
+              <Fingerprint size={24} className="text-vault-600" />
+              <div className="flex-1">
+                <p className="font-medium text-gray-900">Biyometrik Kilit</p>
+                <p className="text-xs text-gray-500">Uygulamayı açarken parmak izi / yüz veya PIN iste</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={lockEnabled}
+                onClick={handleToggleLock}
+                className={`relative w-11 h-6 rounded-full transition-colors ${lockEnabled ? 'bg-vault-700' : 'bg-gray-300'}`}
+              >
+                <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${lockEnabled ? 'translate-x-5' : ''}`} />
               </button>
             </div>
           </div>

@@ -22,7 +22,9 @@ export function computeAssetSummary(
   const realizedPL = totalSold > 0 ? totalSellRevenue - (avgUnitPrice * totalSold) : 0;
 
   const rate = liveRates.find((r) => r.assetType === assetType);
-  const currentUnitPrice = rate?.sellPrice ?? 0;
+  // Elimizdeki varlığı ŞU AN bozdursak alacağımız fiyat = kuyumcunun/bankanın ALIŞ fiyatı (buyPrice).
+  // Satış (sellPrice) müşterinin aldığı yüksek fiyattır; değerlemede kullanmak portföyü şişirir.
+  const currentUnitPrice = rate?.buyPrice ?? 0;
   const currentValue = totalAmount * currentUnitPrice;
   const remainingCost = totalAmount * avgUnitPrice;
   const unrealizedPL = currentValue - remainingCost;

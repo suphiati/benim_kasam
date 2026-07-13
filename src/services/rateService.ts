@@ -1,5 +1,8 @@
+import { Capacitor } from '@capacitor/core';
 import type { LiveRate } from '../types';
 import { mapTruncgilResponse, type RatesMeta } from './apiMappers';
+
+const TRUNCGIL_DIRECT = 'https://finans.truncgil.com/v4/today.json';
 
 export interface FetchRatesResult {
   rates: LiveRate[];
@@ -8,12 +11,32 @@ export interface FetchRatesResult {
 
 const CACHE_KEY = 'benimkasam_rates_cache';
 const CACHE_MAX_AGE_MS = 10 * 60 * 1000; // 10 dakika
+const FETCH_TIMEOUT_MS = 8000; // asılı kalan isteği kes, yedek zincire geç
+
+// Timeout'lu fetch: kaynak yanıt vermezse 8 sn sonra iptal edip yedeğe düşeriz
+async function fetchWithTimeout(url: string, init?: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 function getApiUrl(): string {
-  if (window.location.hostname !== 'localhost') {
-    return '/api/rates';
+  const base = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '');
+  // Native app (Capacitor): mutlak Vercel proxy URL'i gerekir (relatif /api/rates çalışmaz).
+  // VITE_API_BASE_URL tanımlıysa çoklu kaynaklı proxy'yi kullan, yoksa doğrudan Truncgil'e düş.
+  if (Capacitor.isNativePlatform()) {
+    return base ? `${base}/api/rates` : TRUNCGIL_DIRECT;
   }
-  return 'https://finans.truncgil.com/v4/today.json';
+  // Web deploy: aynı origin proxy
+  if (window.location.hostname !== 'localhost') {
+    return base ? `${base}/api/rates` : '/api/rates';
+  }
+  // Localhost geliştirme: doğrudan Truncgil
+  return TRUNCGIL_DIRECT;
 }
 
 // LocalStorage'a cache'le (offline fallback)
@@ -52,7 +75,7 @@ function getStaleCache(): FetchRatesResult | null {
 
 async function fetchFromProxy(): Promise<FetchRatesResult> {
   const url = getApiUrl();
-  const res = await fetch(url);
+  const res = await fetchWithTimeout(url);
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   const data = await res.json();
   return mapTruncgilResponse(data);
@@ -78,7 +101,7 @@ function safeJsonParse(text: string): Record<string, unknown> {
 }
 
 async function fetchDirectTruncgil(): Promise<FetchRatesResult> {
-  const res = await fetch('https://finans.truncgil.com/v4/today.json');
+  const res = await fetchWithTimeout(TRUNCGIL_DIRECT);
   if (!res.ok) throw new Error('Direct Truncgil failed');
   const text = await res.text();
   const data = safeJsonParse(text);

@@ -2,19 +2,29 @@ import { RefreshCw, Vault, Clock } from 'lucide-react';
 import { useVaultStore } from '../../store/vaultStore';
 import { useState, useEffect } from 'react';
 
+// Truncgil "2026-07-13 19:59:01" (yerel saat) ve ISO formatını tolere eder
+function getAgeMinutes(dateStr: string): number {
+  const t = new Date(dateStr.includes('T') ? dateStr : dateStr.replace(' ', 'T')).getTime();
+  if (Number.isNaN(t)) return 0;
+  return Math.max(0, Math.floor((Date.now() - t) / 60000));
+}
+
 function getTimeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return 'Az önce';
+  const minutes = getAgeMinutes(dateStr);
+  if (minutes < 1) return 'az önce';
   if (minutes < 60) return `${minutes} dk önce`;
   const hours = Math.floor(minutes / 60);
-  return `${hours} saat önce`;
+  if (hours < 24) return `${hours} saat önce`;
+  return `${Math.floor(hours / 24)} gün önce`;
 }
+
+// Piyasa verisi 45 dk'dan eskiyse muhtemelen piyasa kapalı / veri donmuş
+const STALE_AFTER_MIN = 45;
 
 export function Header() {
   const refreshRates = useVaultStore((s) => s.refreshRates);
   const isLoadingRates = useVaultStore((s) => s.isLoadingRates);
-  const lastRateUpdate = useVaultStore((s) => s.lastRateUpdate);
+  const marketTimestamp = useVaultStore((s) => s.marketTimestamp);
   const liveRates = useVaultStore((s) => s.liveRates);
   const rateSources = useVaultStore((s) => s.rateSources);
   const [, setTick] = useState(0);
@@ -25,7 +35,8 @@ export function Header() {
     return () => clearInterval(interval);
   }, []);
 
-  const timeAgo = lastRateUpdate ? getTimeAgo(lastRateUpdate) : null;
+  const timeAgo = marketTimestamp ? getTimeAgo(marketTimestamp) : null;
+  const isStale = marketTimestamp ? getAgeMinutes(marketTimestamp) >= STALE_AFTER_MIN : false;
   const hasRates = liveRates.length > 0;
 
   return (
@@ -47,11 +58,13 @@ export function Header() {
       </div>
       {timeAgo && (
         <div className="flex items-center gap-1 mt-1">
-          <Clock size={10} className="text-vault-400" />
-          <span className={`text-[10px] ${hasRates ? 'text-vault-300' : 'text-red-400'}`}>
-            {hasRates
-              ? `Kurlar güncellendi: ${timeAgo}`
-              : 'Kur verileri alınamadı'}
+          <Clock size={10} className={isStale ? 'text-amber-400' : 'text-vault-400'} />
+          <span className={`text-[10px] ${!hasRates ? 'text-red-400' : isStale ? 'text-amber-400' : 'text-vault-300'}`}>
+            {!hasRates
+              ? 'Kur verileri alınamadı'
+              : isStale
+                ? `Piyasa: ${timeAgo} (kapalı olabilir)`
+                : `Piyasa: ${timeAgo}`}
           </span>
           {hasRates && rateSources.length > 0 && (
             <span className="text-[9px] text-vault-500 ml-1">

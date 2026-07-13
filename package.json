@@ -10,6 +10,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@aparajita/capacitor-biometric-auth": "^10.0.0",
+    "@capacitor/android": "^8.4.1",
+    "@capacitor/app": "^8.1.0",
+    "@capacitor/cli": "^8.4.1",
+    "@capacitor/core": "^8.4.1",
+    "@capacitor/ios": "^8.4.1",
+    "@capacitor/preferences": "^8.0.1",
+    "@capacitor/status-bar": "^8.0.2",
     "firebase": "^12.11.0",
     "html5-qrcode": "^2.3.8",
     "idb": "^8.0.3",

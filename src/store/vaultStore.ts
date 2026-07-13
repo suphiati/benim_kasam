@@ -7,7 +7,8 @@ import { syncService } from '../services/firebaseSyncService';
 interface VaultState {
   transactions: Transaction[];
   liveRates: LiveRate[];
-  lastRateUpdate: string | null;
+  lastRateUpdate: string | null;   // istemcinin son fetch (kontrol) zamanı
+  marketTimestamp: string | null;  // piyasa verisinin gerçek güncellenme zamanı (Truncgil Update_Date)
   rateSources: string[];
   isLoadingRates: boolean;
   isInitialized: boolean;
@@ -29,6 +30,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
   transactions: [],
   liveRates: [],
   lastRateUpdate: null,
+  marketTimestamp: null,
   rateSources: [],
   isLoadingRates: false,
   isInitialized: false,
@@ -76,9 +78,11 @@ export const useVaultStore = create<VaultState>((set, get) => ({
   refreshRates: async () => {
     set({ isLoadingRates: true });
     const result = await fetchLiveRates();
+    const hasRates = result.rates.length > 0;
     set({
-      liveRates: result.rates.length > 0 ? result.rates : get().liveRates,
-      lastRateUpdate: result.rates.length > 0 ? new Date().toISOString() : get().lastRateUpdate,
+      liveRates: hasRates ? result.rates : get().liveRates,
+      lastRateUpdate: hasRates ? new Date().toISOString() : get().lastRateUpdate,
+      marketTimestamp: hasRates ? (result.meta.timestamp || get().marketTimestamp) : get().marketTimestamp,
       rateSources: result.meta.sources,
       isLoadingRates: false,
     });

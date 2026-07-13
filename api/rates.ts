@@ -42,8 +42,12 @@ function safeJsonParse(text: string): Record<string, unknown> {
   }
 }
 
+// Ortak iç anahtar listesi (döviz + altın + gümüş)
+const CURRENCY_KEYS = ['USD', 'EUR', 'GBP', 'CHF', 'CAD', 'AUD', 'JPY', 'SAR', 'AED', 'RUB', 'CNY'];
+const METAL_KEYS = ['GRA', 'CEYREKALTIN', 'YARIMALTIN', 'TAMALTIN', 'CUMHURIYETALTINI', 'ATAALTIN', 'RESATALTIN', 'GUMUS'];
+
 // ============================================================
-// KAYNAK 1 (BİRİNCİL): Truncgil API - Altın + Döviz + ONS
+// KAYNAK 1 (BİRİNCİL): Truncgil API - Altın + Döviz + Gümüş
 // ============================================================
 async function fetchTruncgil(): Promise<{ data: Record<string, unknown>; timestamp: string }> {
   const res = await fetch('https://finans.truncgil.com/v4/today.json', {
@@ -55,23 +59,88 @@ async function fetchTruncgil(): Promise<{ data: Record<string, unknown>; timesta
   return { data, timestamp: (data.Update_Date as string) || new Date().toISOString() };
 }
 
-// ============================================================
-// KAYNAK 2 (ONS YEDEK): Yahoo Finance - Altın spot fiyatı (USD/oz)
-// ============================================================
-async function fetchYahooGold(): Promise<{ usdPerOz: number }> {
-  const res = await fetch(
-    'https://query1.finance.yahoo.com/v8/finance/chart/GC%3DF?interval=1d&range=1d',
-    { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; BenimKasam/1.0)' } },
-  );
-  if (!res.ok) throw new Error(`Yahoo Finance HTTP ${res.status}`);
-  const json = await res.json() as { chart?: { result?: Array<{ meta?: { regularMarketPrice?: number } }> } };
-  const price = json?.chart?.result?.[0]?.meta?.regularMarketPrice;
-  if (!price || price <= 0) throw new Error('Yahoo Finance: geçersiz ONS fiyatı');
-  return { usdPerOz: price };
+function extractTruncgil(data: Record<string, unknown>): Record<string, RateItem> {
+  const rates: Record<string, RateItem> = {};
+  for (const key of [...CURRENCY_KEYS, ...METAL_KEYS]) {
+    const item = data[key] as Record<string, string | number> | undefined;
+    if (!item) continue;
+    const buy = parseNum(item['Buying'] ?? '0');
+    const sell = parseNum(item['Selling'] ?? '0');
+    if (validRate(buy, sell)) {
+      rates[key] = { Buying: buy, Selling: sell, Type: (item['Type'] as string) || 'Unknown' };
+    }
+  }
+  return rates;
 }
 
 // ============================================================
-// KAYNAK 3 (DÖVİZ YEDEK): ExchangeRate API
+// KAYNAK 2 (İKİNCİL - GERÇEK FİYAT): GenelPara API
+// Ücretsiz, API anahtarı gerektirmez, Kapalıçarşı/kuyumcu alış-satışları.
+// Truncgil'deki eksik ürünleri doldurur + çapraz kontrol sağlar.
+// ============================================================
+
+// GenelPara sembolü -> iç anahtar
+const GENELPARA_GOLD: Record<string, string> = {
+  GA: 'GRA',            // Gram Altın
+  C: 'CEYREKALTIN',     // Çeyrek
+  Y: 'YARIMALTIN',      // Yarım
+  T: 'TAMALTIN',        // Tam
+  CMR: 'CUMHURIYETALTINI',
+  ATA: 'ATAALTIN',
+  RA: 'RESATALTIN',
+  GAG: 'GUMUS',         // Gram Gümüş
+};
+// JPY GenelPara'da 100 birim üzerinden kote edildiği için skala uyumsuzluğu olmasın diye hariç.
+const GENELPARA_CURR = ['USD', 'EUR', 'GBP', 'CHF', 'CAD', 'AUD'];
+
+interface GenelParaItem { alis: string; satis: string }
+interface GenelParaResponse { success?: boolean; data?: Record<string, GenelParaItem> }
+
+async function fetchGenelParaList(list: 'altin' | 'doviz', symbols: string[]): Promise<Record<string, GenelParaItem>> {
+  const url = `https://api.genelpara.com/json/?list=${list}&sembol=${symbols.join(',')}`;
+  const res = await fetch(url, { headers: { 'User-Agent': 'BenimKasam/1.0' } });
+  if (!res.ok) throw new Error(`GenelPara ${list} HTTP ${res.status}`);
+  const json = (await res.json()) as GenelParaResponse;
+  return json?.data ?? {};
+}
+
+async function fetchGenelPara(): Promise<Record<string, RateItem>> {
+  const rates: Record<string, RateItem> = {};
+  const [goldRes, currRes] = await Promise.allSettled([
+    fetchGenelParaList('altin', Object.keys(GENELPARA_GOLD)),
+    fetchGenelParaList('doviz', GENELPARA_CURR),
+  ]);
+
+  if (goldRes.status === 'fulfilled') {
+    for (const [sym, key] of Object.entries(GENELPARA_GOLD)) {
+      const it = goldRes.value[sym];
+      if (!it) continue;
+      const buy = parseNum(it.alis);
+      const sell = parseNum(it.satis);
+      if (validRate(buy, sell)) {
+        rates[key] = { Buying: buy, Selling: sell, Type: key === 'GUMUS' ? 'Silver' : 'Gold' };
+      }
+    }
+  }
+
+  if (currRes.status === 'fulfilled') {
+    for (const code of GENELPARA_CURR) {
+      const it = currRes.value[code];
+      if (!it) continue;
+      const buy = parseNum(it.alis);
+      const sell = parseNum(it.satis);
+      if (validRate(buy, sell)) {
+        rates[code] = { Buying: buy, Selling: sell, Type: 'Currency' };
+      }
+    }
+  }
+
+  if (Object.keys(rates).length === 0) throw new Error('GenelPara: veri yok');
+  return rates;
+}
+
+// ============================================================
+// KAYNAK 3 (DÖVİZ SON ÇARE): ExchangeRate API
 // ============================================================
 async function fetchExchangeRateAPI(): Promise<Record<string, RateItem>> {
   const res = await fetch('https://api.exchangerate-api.com/v4/latest/TRY');
@@ -79,8 +148,7 @@ async function fetchExchangeRateAPI(): Promise<Record<string, RateItem>> {
   const json = await res.json();
   const rates: Record<string, RateItem> = {};
 
-  const currencyCodes = ['USD', 'EUR', 'GBP', 'CHF', 'CAD', 'AUD', 'JPY', 'SAR', 'AED', 'RUB', 'CNY'];
-  for (const code of currencyCodes) {
+  for (const code of CURRENCY_KEYS) {
     if (json.rates?.[code]) {
       const midRate = 1 / json.rates[code];
       const spread = midRate * 0.005;
@@ -91,180 +159,65 @@ async function fetchExchangeRateAPI(): Promise<Record<string, RateItem>> {
 }
 
 // ============================================================
-// KUYUMCU FORMÜLÜ: Gram Altın = (ONS / 31.1035) × USD/TRY
-// ============================================================
-function calculateGoldFromFormula(
-  onsData: { buy: number; sell: number },
-  usdData: { buy: number; sell: number },
-): Record<string, RateItem> {
-  const TROY_OUNCE = 31.1035;
-  const rates: Record<string, RateItem> = {};
-
-  // Gram altın (has altın bazlı)
-  const gramBuy = (onsData.buy / TROY_OUNCE) * usdData.buy;
-  const gramSell = (onsData.sell / TROY_OUNCE) * usdData.sell;
-
-  if (validRate(gramBuy, gramSell)) {
-    rates['GRA'] = { Buying: gramBuy, Selling: gramSell, Type: 'Gold' };
-
-    // Çeyrek, yarım, tam altın katsayıları (piyasa standartları)
-    const ceyrekMultiplier = 1.75;  // ~1.75 gram altın
-    const yarimMultiplier = 3.50;   // ~3.50 gram altın
-    const tamMultiplier = 7.00;     // ~7.00 gram altın
-    const cumhuriyetMultiplier = 7.216; // ~7.216 gram altın
-
-    rates['CEYREKALTIN'] = {
-      Buying: gramBuy * ceyrekMultiplier,
-      Selling: gramSell * ceyrekMultiplier,
-      Type: 'Gold',
-    };
-    rates['YARIMALTIN'] = {
-      Buying: gramBuy * yarimMultiplier,
-      Selling: gramSell * yarimMultiplier,
-      Type: 'Gold',
-    };
-    rates['TAMALTIN'] = {
-      Buying: gramBuy * tamMultiplier,
-      Selling: gramSell * tamMultiplier,
-      Type: 'Gold',
-    };
-    rates['CUMHURIYETALTINI'] = {
-      Buying: gramBuy * cumhuriyetMultiplier,
-      Selling: gramSell * cumhuriyetMultiplier,
-      Type: 'Gold',
-    };
-    rates['ATAALTIN'] = {
-      Buying: gramBuy * cumhuriyetMultiplier,
-      Selling: gramSell * cumhuriyetMultiplier,
-      Type: 'Gold',
-    };
-    rates['RESATALTIN'] = {
-      Buying: gramBuy * cumhuriyetMultiplier,
-      Selling: gramSell * cumhuriyetMultiplier,
-      Type: 'Gold',
-    };
-  }
-
-  return rates;
-}
-
-// ============================================================
 // ANA HANDLER
+// Strateji: Truncgil (birincil) -> GenelPara (eksikleri doldur + çapraz
+// kontrol) -> ExchangeRate (döviz son çare). Sabit katsayılı "formül"
+// kaldırıldı: iki gerçek kaynak her ürünün fiyatını doğrudan veriyor.
 // ============================================================
 export default async function handler(_req: VercelRequest, res: VercelResponse) {
   const sources: string[] = [];
   const failures: string[] = [];
+  const divergences: string[] = [];
   const finalData: Record<string, RateItem> = {};
   let timestamp = new Date().toISOString();
 
   try {
-    // Tüm kaynakları paralel çek
-    const [truncgilResult, yahooResult, exchangeResult] = await Promise.allSettled([
+    // Kaynakları paralel çek
+    const [truncgilResult, genelParaResult, exchangeResult] = await Promise.allSettled([
       fetchTruncgil(),
-      fetchYahooGold(),
+      fetchGenelPara(),
       fetchExchangeRateAPI(),
     ]);
 
-    // Hata logla
     if (truncgilResult.status === 'rejected') failures.push(`truncgil: ${truncgilResult.reason}`);
-    if (yahooResult.status === 'rejected') failures.push(`yahoo: ${yahooResult.reason}`);
+    if (genelParaResult.status === 'rejected') failures.push(`genelpara: ${genelParaResult.reason}`);
     if (exchangeResult.status === 'rejected') failures.push(`exchangerate: ${exchangeResult.reason}`);
     if (failures.length > 0) console.warn('Failed sources:', failures.join(' | '));
 
-    // ========== 1. TRUNCGIL (birincil - altın + döviz) ==========
-    let onsData: { buy: number; sell: number } | null = null;
-    let usdData: { buy: number; sell: number } | null = null;
-
+    // ========== 1. TRUNCGIL (birincil) ==========
     if (truncgilResult.status === 'fulfilled') {
-      const trData = truncgilResult.value.data;
       timestamp = truncgilResult.value.timestamp;
-
-      // Altın + döviz key'leri
-      const allKeys = [
-        'USD', 'EUR', 'GBP', 'CHF', 'CAD', 'AUD', 'JPY', 'SAR', 'AED', 'RUB', 'CNY',
-        'GRA', 'CEYREKALTIN', 'YARIMALTIN', 'TAMALTIN', 'CUMHURIYETALTINI', 'ATAALTIN', 'RESATALTIN', 'GUMUS',
-      ];
-
-      for (const key of allKeys) {
-        const item = trData[key] as Record<string, string | number> | undefined;
-        if (!item) continue;
-        const buy = parseNum(item['Buying'] || '0');
-        const sell = parseNum(item['Selling'] || '0');
-        if (validRate(buy, sell)) {
-          finalData[key] = { Buying: buy, Selling: sell, Type: (item['Type'] as string) || 'Unknown' };
-        }
+      const trRates = extractTruncgil(truncgilResult.value.data);
+      for (const [key, val] of Object.entries(trRates)) {
+        finalData[key] = val;
       }
-
-      // ONS ve USD verilerini kuyumcu formülü için sakla
-      // Not: Truncgil ONS değeri genellikle 0 gelir, Yahoo Finance yedek olarak kullanılır
-      const onsItem = trData['ONS'] as Record<string, string | number> | undefined;
-      if (onsItem) {
-        const onsBuy = parseNum(onsItem['Buying'] || '0');
-        const onsSell = parseNum(onsItem['Selling'] || '0');
-        if (onsBuy > 0 && onsSell > 0) {
-          onsData = { buy: onsBuy, sell: onsSell };
-        }
-      }
-      const usdItem = trData['USD'] as Record<string, string | number> | undefined;
-      if (usdItem) {
-        const usdBuy = parseNum(usdItem['Buying'] || '0');
-        const usdSell = parseNum(usdItem['Selling'] || '0');
-        if (usdBuy > 0 && usdSell > 0) {
-          usdData = { buy: usdBuy, sell: usdSell };
-        }
-      }
-
-      if (Object.keys(finalData).length > 0) sources.push('truncgil');
+      if (Object.keys(trRates).length > 0) sources.push('truncgil');
     }
 
-    // ========== 2. YAHOO FINANCE ONS YEDEK ==========
-    // Truncgil ONS 0 gelirse Yahoo Finance'ten gerçek spot fiyatını kullan
-    if (!onsData && yahooResult.status === 'fulfilled') {
-      const usdPerOz = yahooResult.value.usdPerOz;
-      // onsData birimi: USD/oz (kuyumcu formülü USD * USD_TRY / TROY_OUNCE kullanır)
-      const spread = usdPerOz * 0.002; // %0.2 spread
-      onsData = { buy: usdPerOz - spread, sell: usdPerOz + spread };
-      console.info(`Yahoo Finance ONS: ${usdPerOz.toFixed(2)} USD/oz`);
-    }
-
-    // ========== 3. KUYUMCU FORMÜLÜ CROSS-CHECK ==========
-    if (onsData && usdData) {
-      const formulaRates = calculateGoldFromFormula(onsData, usdData);
-      const formulaGRA = formulaRates['GRA'];
-
-      if (formulaGRA) {
-        // Truncgil'den GRA geldiyse cross-check yap
-        if (finalData['GRA']) {
-          const trSell = finalData['GRA'].Selling;
-          const fSell = formulaGRA.Selling;
-          const diff = Math.abs(trSell - fSell) / Math.max(trSell, fSell) * 100;
-
-          if (diff > 3) {
-            // %3'ten fazla sapma - formül sonucunu kullan
-            console.warn(`GRA cross-check: Truncgil=${trSell.toFixed(2)}, Formula=${fSell.toFixed(2)}, diff=${diff.toFixed(1)}%`);
-            // Formül sonuçlarını tercih et
-            for (const [key, val] of Object.entries(formulaRates)) {
-              finalData[key] = val;
-            }
-            sources.push('formula');
-          }
+    // ========== 2. GENELPARA (eksikleri doldur + çapraz kontrol) ==========
+    if (genelParaResult.status === 'fulfilled') {
+      const gpRates = genelParaResult.value;
+      let filled = false;
+      for (const [key, gp] of Object.entries(gpRates)) {
+        if (!finalData[key]) {
+          // Truncgil'de yok -> GenelPara ile doldur
+          finalData[key] = gp;
+          filled = true;
         } else {
-          // Truncgil'den altın gelmemişse formülü kullan
-          for (const [key, val] of Object.entries(formulaRates)) {
-            if (!finalData[key]) {
-              finalData[key] = val;
-            }
-          }
-          sources.push('formula');
+          // İki gerçek kaynak da var -> sadece büyük sapmayı logla (veriyi değiştirme)
+          const a = finalData[key].Selling;
+          const b = gp.Selling;
+          const diff = (Math.abs(a - b) / Math.max(a, b)) * 100;
+          if (diff > 5) divergences.push(`${key}: truncgil=${a.toFixed(2)} genelpara=${b.toFixed(2)} (%${diff.toFixed(1)})`);
         }
       }
+      if (filled || Object.keys(gpRates).length > 0) sources.push('genelpara');
     }
 
-    // ========== 4. EXCHANGERATE API (döviz yedek) ==========
+    // ========== 3. EXCHANGERATE (döviz son çare) ==========
     if (exchangeResult.status === 'fulfilled') {
-      const exRates = exchangeResult.value;
       let exUsed = false;
-      for (const [key, val] of Object.entries(exRates)) {
+      for (const [key, val] of Object.entries(exchangeResult.value)) {
         if (!finalData[key]) {
           finalData[key] = val;
           exUsed = true;
@@ -272,6 +225,8 @@ export default async function handler(_req: VercelRequest, res: VercelResponse) 
       }
       if (exUsed) sources.push('exchangerate-api');
     }
+
+    if (divergences.length > 0) console.warn('Kaynak sapmaları:', divergences.join(' | '));
 
     // ========== SONUÇ ==========
     if (sources.length === 0) {
@@ -284,6 +239,7 @@ export default async function handler(_req: VercelRequest, res: VercelResponse) 
       _meta: {
         sources,
         failures,
+        divergences,
         timestamp,
         fetchedAt: new Date().toISOString(),
       },

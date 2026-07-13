@@ -1,5 +1,5 @@
-import { ref, set, remove, onChildAdded, onChildChanged, onChildRemoved, type Unsubscribe } from 'firebase/database';
-import { getFirebaseDb } from '../config/firebase';
+import { ref, set, remove, onChildAdded, onChildChanged, onChildRemoved, type Unsubscribe, type Database } from 'firebase/database';
+import { getFirebaseDb, ensureAuth } from '../config/firebase';
 import type { Transaction } from '../types';
 
 const VAULT_ID_KEY = 'benim_kasam_vault_id';
@@ -54,6 +54,7 @@ class FirebaseSyncService {
   private unsubscribes: Unsubscribe[] = [];
   private onRemoteChange: RemoteChangeCallback | null = null;
   private initialLoadDone = false;
+  private connectSeq = 0; // async connect'i disconnect/yeniden-connect'e karşı korur
 
   getVaultId(): string | null {
     if (!this.vaultId) {
@@ -82,80 +83,67 @@ class FirebaseSyncService {
     this.onRemoteChange = onRemoteChange;
     this.initialLoadDone = false;
 
-    const db = getFirebaseDb();
-    if (!db) return;
+    // Kurallar auth != null istiyor: önce anonim oturumu garantile, sonra dinle.
+    const token = ++this.connectSeq;
+    ensureAuth().then((ok) => {
+      // auth yoksa ya da bu arada disconnect/yeniden-connect olduysa iptal
+      if (!ok || token !== this.connectSeq) return;
+      const db = getFirebaseDb();
+      if (db) this.attachListeners(db, vaultId);
+    });
+  }
 
+  private attachListeners(db: Database, vaultId: string): void {
     const txRef = ref(db, `vaults/${vaultId}/transactions`);
 
-    // Use a timeout to mark initial load as done
-    // onChildAdded fires for all existing children first, then for new ones
+    // onChildAdded önce mevcut tüm kayıtlar için, sonra yenilerde tetiklenir;
+    // ilk yüklemeyi bitmiş saymak için timeout kullan
     let initialTimeout: ReturnType<typeof setTimeout>;
-
     const resetInitialTimeout = () => {
       clearTimeout(initialTimeout);
-      initialTimeout = setTimeout(() => {
-        this.initialLoadDone = true;
-      }, 2000);
+      initialTimeout = setTimeout(() => { this.initialLoadDone = true; }, 2000);
     };
-
     resetInitialTimeout();
 
     const unsub1 = onChildAdded(txRef, (snapshot) => {
       const id = snapshot.key;
       if (!id) return;
-
       if (this.pendingLocalWrites.has(id)) {
         this.pendingLocalWrites.delete(id);
         return;
       }
-
       const data = snapshot.val() as FirebaseTransaction;
-      if (data) {
-        const tx = fromFirebase(data, id);
-        this.onRemoteChange?.('added', tx);
-      }
-
-      if (!this.initialLoadDone) {
-        resetInitialTimeout();
-      }
+      if (data) this.onRemoteChange?.('added', fromFirebase(data, id));
+      if (!this.initialLoadDone) resetInitialTimeout();
     });
 
     const unsub2 = onChildChanged(txRef, (snapshot) => {
       const id = snapshot.key;
       if (!id) return;
-
       if (this.pendingLocalWrites.has(id)) {
         this.pendingLocalWrites.delete(id);
         return;
       }
-
       const data = snapshot.val() as FirebaseTransaction;
-      if (data) {
-        const tx = fromFirebase(data, id);
-        this.onRemoteChange?.('changed', tx);
-      }
+      if (data) this.onRemoteChange?.('changed', fromFirebase(data, id));
     });
 
     const unsub3 = onChildRemoved(txRef, (snapshot) => {
       const id = snapshot.key;
       if (!id) return;
-
       if (this.pendingLocalDeletes.has(id)) {
         this.pendingLocalDeletes.delete(id);
         return;
       }
-
       const data = snapshot.val() as FirebaseTransaction;
-      if (data) {
-        const tx = fromFirebase(data, id);
-        this.onRemoteChange?.('removed', tx);
-      }
+      if (data) this.onRemoteChange?.('removed', fromFirebase(data, id));
     });
 
     this.unsubscribes = [unsub1, unsub2, unsub3];
   }
 
   disconnect(): void {
+    this.connectSeq++; // bekleyen async connect'i geçersiz kıl
     for (const unsub of this.unsubscribes) {
       unsub();
     }
@@ -167,8 +155,9 @@ class FirebaseSyncService {
   }
 
   async uploadAllTransactions(transactions: Transaction[]): Promise<void> {
+    const ok = await ensureAuth();
     const db = getFirebaseDb();
-    if (!db || !this.vaultId) return;
+    if (!ok || !db || !this.vaultId) return;
 
     for (const tx of transactions) {
       this.pendingLocalWrites.add(tx.id);
@@ -178,12 +167,12 @@ class FirebaseSyncService {
   }
 
   pushTransaction(tx: Transaction): void {
-    const db = getFirebaseDb();
-    if (!db || !this.vaultId) return;
-
-    this.pendingLocalWrites.add(tx.id);
-    const txRef = ref(db, `vaults/${this.vaultId}/transactions/${tx.id}`);
-    set(txRef, toFirebase(tx));
+    ensureAuth().then((ok) => {
+      const db = getFirebaseDb();
+      if (!ok || !db || !this.vaultId) return;
+      this.pendingLocalWrites.add(tx.id);
+      set(ref(db, `vaults/${this.vaultId}/transactions/${tx.id}`), toFirebase(tx));
+    });
   }
 
   pushTransactionUpdate(tx: Transaction): void {
@@ -191,12 +180,12 @@ class FirebaseSyncService {
   }
 
   pushTransactionDelete(id: string): void {
-    const db = getFirebaseDb();
-    if (!db || !this.vaultId) return;
-
-    this.pendingLocalDeletes.add(id);
-    const txRef = ref(db, `vaults/${this.vaultId}/transactions/${id}`);
-    remove(txRef);
+    ensureAuth().then((ok) => {
+      const db = getFirebaseDb();
+      if (!ok || !db || !this.vaultId) return;
+      this.pendingLocalDeletes.add(id);
+      remove(ref(db, `vaults/${this.vaultId}/transactions/${id}`));
+    });
   }
 }
 
