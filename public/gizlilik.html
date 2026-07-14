@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="index,follow" />
+  <title>Gizlilik Politikası — BenimKasam</title>
+  <style>
+    :root { --navy:#1e3a5f; --navy-d:#0f1d30; --gold:#d4a017; --ink:#1e293b; --muted:#64748b; --line:#e2e8f0; --bg:#f8fafc; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui,-apple-system,'Segoe UI',Roboto,sans-serif; background:var(--bg); color:var(--ink); line-height:1.65; }
+    .wrap { max-width: 760px; margin:0 auto; padding: 0 20px 64px; }
+    header { background: linear-gradient(135deg,var(--navy),var(--navy-d)); color:#fff; padding: 40px 20px; text-align:center; }
+    header .logo { width:56px;height:56px;border-radius:16px;background:rgba(212,160,23,.15);display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px;font-size:28px; }
+    header h1 { margin:0; font-size:26px; letter-spacing:-.02em; }
+    header p { margin:6px 0 0; color:#a3c4e8; font-size:14px; }
+    .updated { color:var(--muted); font-size:13px; text-align:center; margin-top:20px; }
+    .tldr { background:#fff; border:1px solid var(--line); border-left:4px solid var(--gold); border-radius:12px; padding:18px 20px; margin:28px 0; }
+    .tldr strong { color:var(--navy); }
+    h2 { color:var(--navy); font-size:19px; margin:34px 0 10px; }
+    h3 { font-size:15px; margin:18px 0 6px; }
+    p, li { font-size:15px; }
+    ul { padding-left: 22px; }
+    li { margin: 6px 0; }
+    .yes { color:#16a34a; font-weight:600; }
+    .no { color:#dc2626; font-weight:600; }
+    a { color:var(--navy); }
+    code { background:#eef2f7; padding:1px 6px; border-radius:5px; font-size:13px; }
+    footer { text-align:center; color:var(--muted); font-size:13px; margin-top:40px; padding-top:20px; border-top:1px solid var(--line); }
+    .card { background:#fff; border:1px solid var(--line); border-radius:12px; padding:4px 20px; margin:14px 0; }
+    @media (prefers-color-scheme: dark) {
+      :root { --ink:#e2e8f0; --muted:#94a3b8; --line:#334155; --bg:#0f172a; }
+      body { background:var(--bg); }
+      .tldr,.card { background:#1e293b; }
+      code { background:#334155; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">🔒</div>
+    <h1>Gizlilik Politikası</h1>
+    <p>BenimKasam — Kişisel Kasa Takip Uygulaması</p>
+  </header>
+
+  <div class="wrap">
+    <p class="updated">Son güncelleme: 14 Temmuz 2026</p>
+
+    <div class="tldr">
+      <strong>Özet:</strong> BenimKasam kişisel bir varlık takip uygulamasıdır. <strong>Adınızı, e-postanızı, telefonunuzu veya konumunuzu toplamaz.</strong> Girdiğiniz işlem kayıtları öncelikle <strong>kendi cihazınızda</strong> saklanır. Yalnızca siz açıkça QR ile eşleştirirseniz, verileriniz cihazlar arası senkronizasyon için anonim olarak buluta (Firebase) yüklenir. Reklam yoktur, sizi takip etmeyiz.
+    </div>
+
+    <h2>1. Bu uygulama kimindir</h2>
+    <p>BenimKasam ("uygulama"), döviz ve altın varlıklarınızı takip etmenizi sağlayan kişisel bir araçtır. Bu politika, uygulamayı kullanırken verilerinizin nasıl işlendiğini açıklar.</p>
+
+    <h2>2. Topladığımız ve toplamadığımız veriler</h2>
+    <div class="card">
+      <h3>Toplamadıklarımız <span class="no">(hiçbiri)</span></h3>
+      <ul>
+        <li>Ad, soyad, e-posta, telefon numarası</li>
+        <li>Konum bilgisi</li>
+        <li>Rehber, fotoğraf veya diğer cihaz içeriği</li>
+        <li>Reklam kimliği veya takip tanımlayıcıları</li>
+        <li>Kayıt/giriş hesabı (uygulama hesap oluşturmaz)</li>
+      </ul>
+      <h3>İşlediklerimiz</h3>
+      <ul>
+        <li><strong>İşlem kayıtlarınız:</strong> girdiğiniz varlık tipi, miktar, birim fiyat, tarih ve isteğe bağlı not. Bunları <span class="yes">yalnızca siz</span> girersiniz ve öncelikle cihazınızda saklanır.</li>
+        <li><strong>Anonim senkronizasyon kimliği:</strong> senkronizasyonu açarsanız, kişisel kimliğinizle ilişkili olmayan rastgele bir "kasa kimliği" (vaultId) ve anonim bir oturum kimliği kullanılır.</li>
+      </ul>
+    </div>
+
+    <h2>3. Verilerin cihazınızda saklanması</h2>
+    <p>İşlem kayıtlarınız, cihazınızın yerel tarayıcı/uygulama depolamasında (IndexedDB) tutulur. Bu veriler internete gönderilmeden çalışır. Uygulamayı kaldırırsanız veya uygulama içinden "Tüm Verileri Sil" derseniz bu veriler silinir.</p>
+
+    <h2>4. İsteğe bağlı bulut senkronizasyonu (Firebase)</h2>
+    <p>Birden fazla cihazda aynı kasayı görmek isterseniz, uygulamadaki <strong>QR ile eşleştirme</strong> özelliğini kullanabilirsiniz. Bunu <strong>etkinleştirdiğinizde</strong>:</p>
+    <ul>
+      <li>İşlem kayıtlarınız Google'ın <strong>Firebase Realtime Database</strong> hizmetine, rastgele bir kasa kimliği altında yüklenir.</li>
+      <li>Kimlik doğrulama <strong>anonim</strong> yapılır (Firebase Anonymous Auth) — ad, e-posta veya kişisel bilgi bağlanmaz.</li>
+      <li>Verilere yalnızca gizli kasa kimliğinizi bilen (QR'ı okutulan) cihazlar erişebilir; veritabanı kuralları kimlik doğrulaması gerektirir.</li>
+      <li>Senkronizasyonu istediğiniz zaman <strong>Ayarlar → Eşleştirmeyi Kaldır</strong> ile durdurabilirsiniz.</li>
+    </ul>
+    <p>Senkronizasyonu hiç açmazsanız, hiçbir işlem veriniz cihazınızdan dışarı çıkmaz.</p>
+
+    <h2>5. Güncel kur verileri</h2>
+    <p>Uygulama, güncel döviz ve altın fiyatlarını göstermek için üçüncü taraf finans kaynaklarından (ör. Truncgil, GenelPara, ExchangeRate-API) veri <strong>çeker</strong>. Bu istekler yalnızca fiyat bilgisini <strong>okur</strong>; bu kaynaklara <span class="yes">hiçbir kişisel veriniz veya işlem kaydınız gönderilmez</span>.</p>
+
+    <h2>6. Biyometrik kilit</h2>
+    <p>Uygulamayı parmak izi, yüz tanıma veya cihaz PIN'i ile kilitleyebilirsiniz. Bu doğrulama tamamen <strong>cihazınızın işletim sistemi</strong> tarafından yapılır. Uygulama biyometrik verilerinize <span class="no">erişmez ve saklamaz</span>; yalnızca "başarılı/başarısız" sonucunu alır.</p>
+
+    <h2>7. Kullandığımız üçüncü taraf hizmetler</h2>
+    <ul>
+      <li><strong>Google Firebase</strong> (Realtime Database, Anonymous Authentication) — yalnızca senkronizasyonu açtıysanız. Google'ın gizlilik politikası: <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">policies.google.com/privacy</a></li>
+      <li><strong>Kur veri sağlayıcıları</strong> — fiyat okuma (kişisel veri gönderilmez).</li>
+      <li><strong>Barındırma:</strong> uygulama ve fiyat proxy'si Vercel üzerinde barındırılır.</li>
+    </ul>
+
+    <h2>8. Veri güvenliği</h2>
+    <p>Bulut senkronizasyonu kullanıldığında veriler cihaz ile Firebase arasında şifreli bağlantı (HTTPS/TLS) üzerinden aktarılır. Erişim, gizli rastgele kasa kimliği ve kimlik doğrulama kuralları ile sınırlandırılır. Hiçbir sistem %100 güvenli olmasa da verilerinizi korumak için makul önlemler alırız.</p>
+
+    <h2>9. Verilerinizi dışa aktarma ve silme</h2>
+    <ul>
+      <li><strong>Dışa aktarma:</strong> Ayarlar → "Verileri Dışa Aktar" ile tüm kayıtlarınızı JSON olarak indirebilirsiniz.</li>
+      <li><strong>Silme:</strong> Ayarlar → "Tüm Verileri Sil" ile cihazınızdaki (ve senkronluysa buluttaki) verilerinizi kaldırabilirsiniz.</li>
+      <li><strong>Senkronu durdurma:</strong> Ayarlar → "Eşleştirmeyi Kaldır".</li>
+    </ul>
+
+    <h2>10. Çocukların gizliliği</h2>
+    <p>Uygulama 13 yaşından küçük çocuklara yönelik değildir ve bilerek onlardan veri toplamaz.</p>
+
+    <h2>11. Bu politikadaki değişiklikler</h2>
+    <p>Bu gizlilik politikasını zaman zaman güncelleyebiliriz. Değişiklikler bu sayfada yayımlanır ve "Son güncelleme" tarihi buna göre değişir.</p>
+
+    <h2>12. İletişim</h2>
+    <p>Gizlilikle ilgili sorularınız için: <a href="mailto:suphi.celikoz@gmail.com">suphi.celikoz@gmail.com</a></p>
+
+    <footer>
+      © 2026 BenimKasam · Bu uygulama kişisel kullanım için bir varlık takip aracıdır ve finansal danışmanlık sağlamaz.
+    </footer>
+  </div>
+</body>
+</html>
