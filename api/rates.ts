@@ -43,8 +43,8 @@ function safeJsonParse(text: string): Record<string, unknown> {
 }
 
 // Ortak iç anahtar listesi (döviz + altın + gümüş)
-const CURRENCY_KEYS = ['USD', 'EUR', 'GBP', 'CHF', 'CAD', 'AUD', 'JPY', 'SAR', 'AED', 'RUB', 'CNY'];
-const METAL_KEYS = ['GRA', 'CEYREKALTIN', 'YARIMALTIN', 'TAMALTIN', 'CUMHURIYETALTINI', 'ATAALTIN', 'RESATALTIN', 'GUMUS'];
+const CURRENCY_KEYS = ['USD', 'EUR', 'GBP', 'CHF', 'CAD', 'AUD', 'JPY', 'SAR', 'AED', 'RUB', 'CNY', 'NOK', 'SEK', 'KWD', 'BGN', 'GEL'];
+const METAL_KEYS = ['GRA', 'CEYREKALTIN', 'YARIMALTIN', 'TAMALTIN', 'CUMHURIYETALTINI', 'ATAALTIN', 'GUMUS', '14AYARALTIN', 'YIA'];
 
 // ============================================================
 // KAYNAK 1 (BİRİNCİL): Truncgil API - Altın + Döviz + Gümüş
@@ -87,7 +87,6 @@ const GENELPARA_GOLD: Record<string, string> = {
   T: 'TAMALTIN',        // Tam
   CMR: 'CUMHURIYETALTINI',
   ATA: 'ATAALTIN',
-  RA: 'RESATALTIN',
   GAG: 'GUMUS',         // Gram Gümüş
 };
 // JPY GenelPara'da 100 birim üzerinden kote edildiği için skala uyumsuzluğu olmasın diye hariç.

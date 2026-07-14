@@ -99,6 +99,46 @@ export const ASSET_CONFIG: Record<AssetType, AssetConfig> = {
     truncgilKey: 'CNY',
     category: 'currency',
   },
+  NOK: {
+    label: 'Norveç Kronu',
+    icon: 'Banknote',
+    unit: 'kr',
+    color: '#0ea5e9',
+    truncgilKey: 'NOK',
+    category: 'currency',
+  },
+  SEK: {
+    label: 'İsveç Kronu',
+    icon: 'Banknote',
+    unit: 'kr',
+    color: '#3b82f6',
+    truncgilKey: 'SEK',
+    category: 'currency',
+  },
+  KWD: {
+    label: 'Kuveyt Dinarı',
+    icon: 'Banknote',
+    unit: 'KD',
+    color: '#059669',
+    truncgilKey: 'KWD',
+    category: 'currency',
+  },
+  BGN: {
+    label: 'Bulgar Levası',
+    icon: 'Banknote',
+    unit: 'лв',
+    color: '#8b5cf6',
+    truncgilKey: 'BGN',
+    category: 'currency',
+  },
+  GEL: {
+    label: 'Gürcistan Larisi',
+    icon: 'Banknote',
+    unit: '₾',
+    color: '#ef4444',
+    truncgilKey: 'GEL',
+    category: 'currency',
+  },
   // Altınlar
   GRAM_ALTIN: {
     label: 'Gram Altın',
@@ -148,12 +188,20 @@ export const ASSET_CONFIG: Record<AssetType, AssetConfig> = {
     truncgilKey: 'ATAALTIN',
     category: 'gold',
   },
-  RESAT_ALTIN: {
-    label: 'Reşat Altın',
-    icon: 'Medal',
-    unit: 'adet',
-    color: '#92400e',
-    truncgilKey: 'RESATALTIN',
+  AYAR14_ALTIN: {
+    label: '14 Ayar Altın',
+    icon: 'Coins',
+    unit: 'gr',
+    color: '#c2872a',
+    truncgilKey: '14AYARALTIN',
+    category: 'gold',
+  },
+  AYAR22_BILEZIK: {
+    label: '22 Ayar Bilezik',
+    icon: 'CircleDot',
+    unit: 'gr',
+    color: '#dba43a',
+    truncgilKey: 'YIA',
     category: 'gold',
   },
   // Değerli Maden
@@ -170,8 +218,9 @@ export const ASSET_CONFIG: Record<AssetType, AssetConfig> = {
 export const ASSET_TYPES: AssetType[] = [
   // Dövizler
   'USD', 'EUR', 'GBP', 'CHF', 'CAD', 'AUD', 'JPY', 'SAR', 'AED', 'RUB', 'CNY',
+  'NOK', 'SEK', 'KWD', 'BGN', 'GEL',
   // Altınlar
-  'GRAM_ALTIN', 'CEYREK_ALTIN', 'YARIM_ALTIN', 'TAM_ALTIN', 'CUMHURIYET_ALTINI', 'ATA_ALTIN', 'RESAT_ALTIN',
+  'GRAM_ALTIN', 'CEYREK_ALTIN', 'YARIM_ALTIN', 'TAM_ALTIN', 'CUMHURIYET_ALTINI', 'ATA_ALTIN', 'AYAR14_ALTIN', 'AYAR22_BILEZIK',
   // Değerli Maden
   'GUMUS',
 ];

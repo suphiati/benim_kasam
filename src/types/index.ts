@@ -1,7 +1,8 @@
 export type AssetType =
   | 'USD' | 'EUR' | 'GBP' | 'CHF' | 'CAD' | 'AUD' | 'JPY' | 'SAR' | 'AED' | 'RUB' | 'CNY'
+  | 'NOK' | 'SEK' | 'KWD' | 'BGN' | 'GEL'
   | 'GRAM_ALTIN' | 'CEYREK_ALTIN' | 'YARIM_ALTIN' | 'TAM_ALTIN'
-  | 'CUMHURIYET_ALTINI' | 'ATA_ALTIN' | 'RESAT_ALTIN'
+  | 'CUMHURIYET_ALTINI' | 'ATA_ALTIN' | 'AYAR14_ALTIN' | 'AYAR22_BILEZIK'
   | 'GUMUS';
 
 export type TransactionType = 'buy' | 'sell';
