@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { Smartphone, Share, PlusSquare, MoreVertical, Download, X } from 'lucide-react';
 
 interface BeforeInstallPromptEvent extends Event {
@@ -41,6 +42,9 @@ export function InstallGuide() {
       window.removeEventListener('appinstalled', installedHandler);
     };
   }, [isStandalone]);
+
+  // Native app (Capacitor) zaten kurulu — PWA yükleme rehberi anlamsız
+  if (Capacitor.isNativePlatform()) return null;
 
   // Zaten yüklü veya kapatıldı
   if (installed || dismissed) return null;
