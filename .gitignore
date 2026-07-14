@@ -30,3 +30,9 @@ dist-ssr
 
 # Claude Code (araç konfigürasyonu, worktree kopyaları, yerel ayarlar)
 .claude/
+
+# Android imzalama sırları — ASLA commit'lenmez.
+# Keystore'u kaybedersen Play App Signing'den upload key'i sıfırlayabilirsin.
+*.jks
+*.keystore
+keystore.properties
