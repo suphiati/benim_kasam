@@ -2,8 +2,12 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
+import pkg from './package.json'
 
 export default defineConfig({
+  // Sürüm tek kaynaktan: package.json. Eskiden SettingsPage'de elle yazılıydı ve
+  // build.gradle'dan kaymıştı (arayüz v1.1.0 derken yüklü sürüm 1.0.1'di).
+  define: { __APP_VERSION__: JSON.stringify(pkg.version) },
   plugins: [
     react(),
     tailwindcss(),

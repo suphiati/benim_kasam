@@ -320,7 +320,7 @@ export function SettingsPage({ isConnected, onDisconnect }: SettingsPageProps) {
           {/* Marka adı - çevrilmez */}
           <p className="font-bold text-vault-800 text-lg">BenimKasam</p>
           <p className="text-xs text-gray-400 mt-1">{t('settings.tagline')}</p>
-          <p className="text-[10px] text-gray-300 mt-2">v1.1.0</p>
+          <p className="text-[10px] text-gray-300 mt-2">v{__APP_VERSION__}</p>
         </div>
       </div>
 
