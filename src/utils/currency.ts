@@ -2,10 +2,12 @@ import type { BaseCurrency, FxSnapshot, LiveRate } from '../types';
 
 export const BASE_CURRENCIES: BaseCurrency[] = ['TRY', 'USD', 'EUR'];
 
-export const CURRENCY_META: Record<BaseCurrency, { label: string; symbol: string }> = {
-  TRY: { label: 'Türk Lirası', symbol: '₺' },
-  USD: { label: 'Amerikan Doları', symbol: '$' },
-  EUR: { label: 'Euro', symbol: '€' },
+// Yalnızca sembol: para birimi ADI gerekirse i18n'deki asset.* anahtarlarından gelir,
+// burada ikinci bir (çevrilmemiş) kaynak tutmayalım.
+export const CURRENCY_META: Record<BaseCurrency, { symbol: string }> = {
+  TRY: { symbol: '₺' },
+  USD: { symbol: '$' },
+  EUR: { symbol: '€' },
 };
 
 /**

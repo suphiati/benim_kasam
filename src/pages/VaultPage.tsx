@@ -9,6 +9,7 @@ import { QrScanModal } from '../components/qr/QrScanModal';
 import { Vault, QrCode, ScanLine, Wifi, WifiOff } from 'lucide-react';
 import { InstallGuide } from '../components/common/InstallGuide';
 import { syncService } from '../services/firebaseSyncService';
+import { useT } from '../hooks/useT';
 
 interface VaultPageProps {
   isConnected: boolean;
@@ -18,13 +19,14 @@ interface VaultPageProps {
 export function VaultPage({ isConnected, onConnect }: VaultPageProps) {
   const transactions = useVaultStore((s) => s.transactions);
   const { summaries, totals } = useAssetSummaries();
+  const { t, tp } = useT();
   const [showQrGenerate, setShowQrGenerate] = useState(false);
   const [showQrScan, setShowQrScan] = useState(false);
 
   const syncBadge = syncService.getVaultId() ? (
     <div className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full ${isConnected ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
       {isConnected ? <Wifi size={12} /> : <WifiOff size={12} />}
-      {isConnected ? 'Senkron' : 'Bağlantı yok'}
+      {isConnected ? t('vault.synced') : t('vault.notConnected')}
     </div>
   ) : null;
 
@@ -34,16 +36,18 @@ export function VaultPage({ isConnected, onConnect }: VaultPageProps) {
         <InstallGuide />
         {syncBadge && <div className="mb-2">{syncBadge}</div>}
         <Vault size={64} className="text-gray-300 mb-4 mt-4" />
-        <h2 className="text-lg font-semibold text-gray-500 mb-1">Kasanız Boş</h2>
+        <h2 className="text-lg font-semibold text-gray-500 mb-1">{t('vault.empty')}</h2>
         <p className="text-sm text-gray-400">
-          İlk varlığınızı eklemek için "Ekle" sekmesine gidin.
+          {/* Sekme adı TabBar ile aynı anahtardan gelir: sabit "Ekle" yazsaydık
+              sekme çevrilince bu cümle sessizce desenkron kalırdı. */}
+          {t('vault.emptyHint', { tab: t('nav.add') })}
         </p>
         <button
           onClick={() => setShowQrScan(true)}
           className="mt-4 flex items-center gap-2 px-4 py-2.5 bg-vault-50 border border-vault-200 rounded-xl text-vault-800 text-sm font-medium hover:bg-vault-100 transition-colors"
         >
           <ScanLine size={18} />
-          QR Oku
+          {t('vault.qrScan')}
         </button>
         {showQrScan && (
           <QrScanModal
@@ -72,14 +76,14 @@ export function VaultPage({ isConnected, onConnect }: VaultPageProps) {
           className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-vault-50 border border-vault-200 rounded-xl text-vault-800 text-sm font-medium hover:bg-vault-100 transition-colors"
         >
           <QrCode size={18} />
-          QR Oluştur
+          {t('vault.qrGenerate')}
         </button>
         <button
           onClick={() => setShowQrScan(true)}
           className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-vault-50 border border-vault-200 rounded-xl text-vault-800 text-sm font-medium hover:bg-vault-100 transition-colors"
         >
           <ScanLine size={18} />
-          QR Oku
+          {t('vault.qrScan')}
         </button>
       </div>
       {syncBadge && <div className="flex justify-center mt-2">{syncBadge}</div>}
@@ -98,7 +102,7 @@ export function VaultPage({ isConnected, onConnect }: VaultPageProps) {
       <LiveRatesBar />
       <div className="px-4 mt-4">
         <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-          Varlıklarım ({summaries.length} kalem)
+          {tp('vault.myAssets', summaries.length)}
         </h3>
         <div className="space-y-3">
           {summaries.map((summary) => (

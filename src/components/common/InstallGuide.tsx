@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { Smartphone, Share, PlusSquare, MoreVertical, Download, X } from 'lucide-react';
+import { useT } from '../../hooks/useT';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -17,6 +18,7 @@ function getDeviceInfo() {
 }
 
 export function InstallGuide() {
+  const { t } = useT();
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [dismissed, setDismissed] = useState(false);
   const [installed, setInstalled] = useState(false);
@@ -65,11 +67,11 @@ export function InstallGuide() {
               <Download size={20} className="text-gold-400" />
             </div>
             <div>
-              <p className="font-semibold text-sm">Uygulamayı Telefonuna Yükle</p>
-              <p className="text-vault-300 text-xs mt-0.5">Ana ekrandan hızlıca aç</p>
+              <p className="font-semibold text-sm">{t('install.title')}</p>
+              <p className="text-vault-300 text-xs mt-0.5">{t('install.subtitleAuto')}</p>
             </div>
           </div>
-          <button type="button" title="Kapat" onClick={() => setDismissed(true)} className="text-vault-400 hover:text-white p-1">
+          <button type="button" title={t('common.close')} onClick={() => setDismissed(true)} className="text-vault-400 hover:text-white p-1">
             <X size={16} />
           </button>
         </div>
@@ -78,7 +80,7 @@ export function InstallGuide() {
           onClick={handleInstall}
           className="mt-3 w-full bg-gold-400 text-vault-900 py-2.5 rounded-xl font-bold text-sm hover:bg-gold-300 transition-colors"
         >
-          Yükle
+          {t('install.action')}
         </button>
       </div>
     );
@@ -94,18 +96,20 @@ export function InstallGuide() {
               <Smartphone size={20} className="text-gold-400" />
             </div>
             <div>
-              <p className="font-semibold text-sm">Uygulamayı Telefonuna Yükle</p>
-              <p className="text-vault-300 text-xs mt-0.5">3 kolay adımda kur</p>
+              <p className="font-semibold text-sm">{t('install.title')}</p>
+              <p className="text-vault-300 text-xs mt-0.5">{t('install.subtitleIos')}</p>
             </div>
           </div>
-          <button type="button" title="Kapat" onClick={() => setDismissed(true)} className="text-vault-400 hover:text-white p-1">
+          <button type="button" title={t('common.close')} onClick={() => setDismissed(true)} className="text-vault-400 hover:text-white p-1">
             <X size={16} />
           </button>
         </div>
+        {/* Adımlar iOS'un GERÇEK buton adlarını alıntılar - İngilizcesi birebir
+            çeviri değil, Safari'nin kendi metni ("Add to Home Screen" / "Add"). */}
         <div className="mt-3 space-y-2">
-          <Step num={1} icon={<Share size={14} />} text="Safari'de alttaki paylaş butonuna bas" />
-          <Step num={2} icon={<PlusSquare size={14} />} text='"Ana Ekrana Ekle" seçeneğini bul' />
-          <Step num={3} icon={<Smartphone size={14} />} text='"Ekle" butonuna bas' />
+          <Step num={1} icon={<Share size={14} />} text={t('install.ios.step1')} />
+          <Step num={2} icon={<PlusSquare size={14} />} text={t('install.ios.step2')} />
+          <Step num={3} icon={<Smartphone size={14} />} text={t('install.ios.step3')} />
         </div>
       </div>
     );
@@ -121,17 +125,19 @@ export function InstallGuide() {
               <Smartphone size={20} className="text-gold-400" />
             </div>
             <div>
-              <p className="font-semibold text-sm">Uygulamayı Telefonuna Yükle</p>
-              <p className="text-vault-300 text-xs mt-0.5">2 kolay adımda kur</p>
+              <p className="font-semibold text-sm">{t('install.title')}</p>
+              <p className="text-vault-300 text-xs mt-0.5">{t('install.subtitleAndroid')}</p>
             </div>
           </div>
-          <button type="button" title="Kapat" onClick={() => setDismissed(true)} className="text-vault-400 hover:text-white p-1">
+          <button type="button" title={t('common.close')} onClick={() => setDismissed(true)} className="text-vault-400 hover:text-white p-1">
             <X size={16} />
           </button>
         </div>
+        {/* Adım 2 Android menüsünün GERÇEK metnini alıntılar
+            ("Add to Home screen" / "Install app") - birebir çeviri değil. */}
         <div className="mt-3 space-y-2">
-          <Step num={1} icon={<MoreVertical size={14} />} text={isSamsung ? 'Tarayıcı menüsünden (≡)' : 'Sağ üstteki 3 noktaya (⋮) bas'} />
-          <Step num={2} icon={<Download size={14} />} text='"Ana ekrana ekle" veya "Uygulamayı yükle" seçeneğine bas' />
+          <Step num={1} icon={<MoreVertical size={14} />} text={isSamsung ? t('install.android.step1Samsung') : t('install.android.step1Other')} />
+          <Step num={2} icon={<Download size={14} />} text={t('install.android.step2')} />
         </div>
       </div>
     );

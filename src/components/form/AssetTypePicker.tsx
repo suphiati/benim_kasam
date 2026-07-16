@@ -1,5 +1,6 @@
 import type { AssetType } from '../../types';
-import { ASSET_CONFIG, ASSET_TYPES } from '../../constants/assets';
+import { ASSET_CONFIG, ASSET_TYPES, assetLabelKey } from '../../constants/assets';
+import { useT } from '../../hooks/useT';
 
 interface AssetTypePickerProps {
   selected: AssetType | null;
@@ -11,6 +12,7 @@ const ICON_MAP: Record<string, string> = {
   'C$': 'C$', 'A$': 'A$',
 };
 
+// Rozet: config.unit ÇEVRİLMEZ olduğu için dilden bağımsız sabittir.
 function getIcon(config: { unit: string; category: string }): string {
   if (ICON_MAP[config.unit]) return ICON_MAP[config.unit];
   if (config.category === 'gold') return 'Au';
@@ -19,9 +21,10 @@ function getIcon(config: { unit: string; category: string }): string {
 }
 
 export function AssetTypePicker({ selected, onSelect }: AssetTypePickerProps) {
-  const currencies = ASSET_TYPES.filter((t) => ASSET_CONFIG[t].category === 'currency');
-  const golds = ASSET_TYPES.filter((t) => ASSET_CONFIG[t].category === 'gold');
-  const commodities = ASSET_TYPES.filter((t) => ASSET_CONFIG[t].category === 'commodity');
+  const { t } = useT();
+  const currencies = ASSET_TYPES.filter((type) => ASSET_CONFIG[type].category === 'currency');
+  const golds = ASSET_TYPES.filter((type) => ASSET_CONFIG[type].category === 'gold');
+  const commodities = ASSET_TYPES.filter((type) => ASSET_CONFIG[type].category === 'commodity');
 
   const renderGroup = (label: string, types: AssetType[]) => (
     <div>
@@ -47,7 +50,7 @@ export function AssetTypePicker({ selected, onSelect }: AssetTypePickerProps) {
               >
                 {getIcon(config)}
               </div>
-              <span className="truncate w-full text-center text-[10px] leading-tight">{config.label}</span>
+              <span className="truncate w-full text-center text-[10px] leading-tight">{t(assetLabelKey(type))}</span>
             </button>
           );
         })}
@@ -57,9 +60,9 @@ export function AssetTypePicker({ selected, onSelect }: AssetTypePickerProps) {
 
   return (
     <div className="space-y-3">
-      {renderGroup('Dövizler', currencies)}
-      {renderGroup('Altın', golds)}
-      {commodities.length > 0 && renderGroup('Değerli Maden', commodities)}
+      {renderGroup(t('form.group.currencies'), currencies)}
+      {renderGroup(t('form.group.gold'), golds)}
+      {commodities.length > 0 && renderGroup(t('form.group.commodity'), commodities)}
     </div>
   );
 }

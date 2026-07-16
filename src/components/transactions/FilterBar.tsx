@@ -1,5 +1,6 @@
 import type { AssetType } from '../../types';
-import { ASSET_CONFIG, ASSET_TYPES } from '../../constants/assets';
+import { ASSET_TYPES, assetLabelKey } from '../../constants/assets';
+import { useT } from '../../hooks/useT';
 
 interface FilterBarProps {
   selected: AssetType | null;
@@ -7,6 +8,8 @@ interface FilterBarProps {
 }
 
 export function FilterBar({ selected, onSelect }: FilterBarProps) {
+  const { t } = useT();
+
   return (
     <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
       <button
@@ -17,7 +20,7 @@ export function FilterBar({ selected, onSelect }: FilterBarProps) {
             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
         }`}
       >
-        Tümü
+        {t('tx.filterAll')}
       </button>
       {ASSET_TYPES.map((type) => (
         <button
@@ -29,7 +32,7 @@ export function FilterBar({ selected, onSelect }: FilterBarProps) {
               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
           }`}
         >
-          {ASSET_CONFIG[type].label}
+          {t(assetLabelKey(type))}
         </button>
       ))}
     </div>

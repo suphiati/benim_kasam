@@ -10,6 +10,7 @@ import { AddTransactionPage } from './pages/AddTransactionPage';
 import { TransactionsPage } from './pages/TransactionsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { BiometricLock } from './components/common/BiometricLock';
+import { useT } from './hooks/useT';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabId>('vault');
@@ -17,6 +18,7 @@ export default function App() {
   const isInitialized = useVaultStore((s) => s.isInitialized);
   const { isConnected, connect, disconnect } = useFirebaseSync();
   const { locked, unlock } = useAppLock();
+  const { t } = useT();
 
   useEffect(() => {
     init();
@@ -28,7 +30,7 @@ export default function App() {
     <>
       {!isInitialized ? (
         <div className="flex-1 flex items-center justify-center">
-          <div className="animate-pulse text-vault-500 font-medium">Yükleniyor...</div>
+          <div className="animate-pulse text-vault-500 font-medium">{t('common.loading')}</div>
         </div>
       ) : (
         <>

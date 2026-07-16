@@ -1,4 +1,6 @@
-import { LayoutDashboard, List, PlusCircle, Settings } from 'lucide-react';
+import { LayoutDashboard, List, PlusCircle, Settings, type LucideIcon } from 'lucide-react';
+import { useT } from '../../hooks/useT';
+import type { TKey } from '../../i18n';
 
 export type TabId = 'vault' | 'transactions' | 'add' | 'settings';
 
@@ -7,14 +9,19 @@ interface TabBarProps {
   onTabChange: (tab: TabId) => void;
 }
 
-const tabs = [
-  { id: 'vault' as TabId, label: 'Kasam', icon: LayoutDashboard },
-  { id: 'add' as TabId, label: 'Ekle', icon: PlusCircle },
-  { id: 'transactions' as TabId, label: 'İşlemler', icon: List },
-  { id: 'settings' as TabId, label: 'Ayarlar', icon: Settings },
+// Metin değil ANAHTAR tut: modül seviyesinde çevirsek dil değişince donardı.
+// Boş-durum cümleleri de bu anahtarları kullanır (VaultPage/TransactionsPage),
+// yani sekme adı tek yerden gelir - biri çevrilip diğeri kalamaz.
+const tabs: { id: TabId; labelKey: TKey; icon: LucideIcon }[] = [
+  { id: 'vault', labelKey: 'nav.vault', icon: LayoutDashboard },
+  { id: 'add', labelKey: 'nav.add', icon: PlusCircle },
+  { id: 'transactions', labelKey: 'nav.transactions', icon: List },
+  { id: 'settings', labelKey: 'nav.settings', icon: Settings },
 ];
 
 export function TabBar({ activeTab, onTabChange }: TabBarProps) {
+  const { t } = useT();
+
   return (
     <nav className="bg-white border-t border-gray-200 flex sticky bottom-0 z-50">
       {tabs.map((tab) => {
@@ -32,7 +39,7 @@ export function TabBar({ activeTab, onTabChange }: TabBarProps) {
             }`}
           >
             <Icon size={20} />
-            <span className="text-xs font-medium">{tab.label}</span>
+            <span className="text-xs font-medium">{t(tab.labelKey)}</span>
           </button>
         );
       })}

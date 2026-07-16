@@ -1,11 +1,13 @@
 import { useRef, useEffect } from 'react';
 import { useVaultStore } from '../store/vaultStore';
-import { Download, Upload, Trash2, Smartphone, Wifi, WifiOff, Unlink, Fingerprint, Coins } from 'lucide-react';
+import { Download, Upload, Trash2, Smartphone, Wifi, WifiOff, Unlink, Fingerprint, Coins, Languages } from 'lucide-react';
 import { useState } from 'react';
 import { ConfirmModal } from '../components/common/ConfirmModal';
 import { syncService } from '../services/firebaseSyncService';
 import { isNative, getBiometricStatus, isLockEnabled, setLockEnabled, authenticate } from '../services/biometric';
 import { BASE_CURRENCIES, CURRENCY_META } from '../utils/currency';
+import { useT } from '../hooks/useT';
+import { LANGS, LANG_LABEL, type TKey } from '../i18n';
 
 interface SettingsPageProps {
   isConnected: boolean;
@@ -18,13 +20,16 @@ export function SettingsPage({ isConnected, onDisconnect }: SettingsPageProps) {
   const transactions = useVaultStore((s) => s.transactions);
   const baseCurrency = useVaultStore((s) => s.baseCurrency);
   const setBaseCurrency = useVaultStore((s) => s.setBaseCurrency);
+  const setLanguage = useVaultStore((s) => s.setLanguage);
+  const { t, tp, lang } = useT();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
   // Durum, metnin İÇERİĞİNDEN değil kendi alanından okunur. Eskiden stil
   // importStatus.includes('Hata') ile seçiliyordu; metin çevrilince ('Error: ...')
   // kontrol false döner ve HATA mesajı yeşil "başarılı" kutusunda görünürdü.
-  const [importStatus, setImportStatus] = useState<{ ok: boolean; message: string } | null>(null);
+  // Metin değil ANAHTAR tutulur: kutu açıkken dil değişse bile takip eder.
+  const [importStatus, setImportStatus] = useState<{ ok: boolean; messageKey: TKey } | null>(null);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
 
   // Biyometrik kilit (yalnız native)
@@ -69,7 +74,9 @@ export function SettingsPage({ isConnected, onDisconnect }: SettingsPageProps) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `benim-kasam-yedek-${new Date().toISOString().split('T')[0]}.json`;
+    // Dosya adı bilinçli olarak SABİT İngilizce: dosya diskte kalıcı, dil ise
+    // değişebilir - iki dilde iki farklı ad yedekleri karıştırırdı.
+    a.download = `benim-kasam-backup-${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -80,10 +87,10 @@ export function SettingsPage({ isConnected, onDisconnect }: SettingsPageProps) {
     try {
       const text = await file.text();
       await importData(text);
-      setImportStatus({ ok: true, message: 'Başarıyla içe aktarıldı!' });
+      setImportStatus({ ok: true, messageKey: 'settings.importOk' });
       setTimeout(() => setImportStatus(null), 3000);
     } catch {
-      setImportStatus({ ok: false, message: 'Hata: Dosya okunamadı veya geçersiz format.' });
+      setImportStatus({ ok: false, messageKey: 'settings.importError' });
       setTimeout(() => setImportStatus(null), 3000);
     }
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -110,7 +117,7 @@ export function SettingsPage({ isConnected, onDisconnect }: SettingsPageProps) {
 
   return (
     <div className="flex-1 overflow-y-auto p-4">
-      <h2 className="text-lg font-bold text-gray-900 mb-4">Ayarlar</h2>
+      <h2 className="text-lg font-bold text-gray-900 mb-4">{t('settings.title')}</h2>
 
       <div className="space-y-3">
         {/* PWA Yükle */}
@@ -119,15 +126,15 @@ export function SettingsPage({ isConnected, onDisconnect }: SettingsPageProps) {
             <div className="flex items-center gap-3">
               <Smartphone size={24} className="text-vault-600" />
               <div className="flex-1">
-                <p className="font-medium text-gray-900">Uygulamayı Yükle</p>
-                <p className="text-xs text-gray-500">Ana ekranınıza ekleyerek daha hızlı erişin</p>
+                <p className="font-medium text-gray-900">{t('settings.installTitle')}</p>
+                <p className="text-xs text-gray-500">{t('settings.installDesc')}</p>
               </div>
               <button
                 type="button"
                 onClick={handleInstall}
                 className="px-4 py-2 bg-vault-800 text-white rounded-lg text-sm font-medium hover:bg-vault-700 transition-colors"
               >
-                Yükle
+                {t('install.action')}
               </button>
             </div>
           </div>
@@ -138,8 +145,9 @@ export function SettingsPage({ isConnected, onDisconnect }: SettingsPageProps) {
           <div className="flex items-center gap-3 mb-3">
             <Coins size={24} className="text-vault-600" />
             <div className="flex-1">
-              <p className="font-medium text-gray-900">Para Birimi</p>
-              <p className="text-xs text-gray-500">Kasanızın raporlanacağı para birimi. İşlem girişi ₺ olarak kalır.</p>
+              <p className="font-medium text-gray-900">{t('settings.currency')}</p>
+              {/* ₺ düz metinde değil: sembol tek kaynaktan (CURRENCY_META) gelir. */}
+              <p className="text-xs text-gray-500">{t('settings.currencyDesc', { sym: CURRENCY_META.TRY.symbol })}</p>
             </div>
           </div>
           <div className="flex gap-2">
@@ -159,14 +167,42 @@ export function SettingsPage({ isConnected, onDisconnect }: SettingsPageProps) {
           </div>
         </div>
 
+        {/* Dil - para birimiyle aynı segment örüntüsü */}
+        <div className="bg-white border border-gray-200 rounded-xl p-4">
+          <div className="flex items-center gap-3 mb-3">
+            <Languages size={24} className="text-vault-600" />
+            <div className="flex-1">
+              <p className="font-medium text-gray-900">{t('settings.language')}</p>
+              <p className="text-xs text-gray-500">{t('settings.languageDesc')}</p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            {LANGS.map((l) => (
+              <button
+                key={l}
+                type="button"
+                aria-pressed={lang === l}
+                onClick={() => setLanguage(l)}
+                className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  lang === l ? 'bg-vault-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {/* Dil adı HER ZAMAN kendi dilinde ("Türkçe" / "English"):
+                    seçemediğin dili tanıyabilmen için çevrilmez. */}
+                {LANG_LABEL[l]}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Biyometrik Kilit (yalnız native) */}
         {lockSupported && (
           <div className="bg-white border border-gray-200 rounded-xl p-4">
             <div className="flex items-center gap-3">
               <Fingerprint size={24} className="text-vault-600" />
               <div className="flex-1">
-                <p className="font-medium text-gray-900">Biyometrik Kilit</p>
-                <p className="text-xs text-gray-500">Uygulamayı açarken parmak izi / yüz veya PIN iste</p>
+                <p className="font-medium text-gray-900">{t('settings.biometric')}</p>
+                <p className="text-xs text-gray-500">{t('settings.biometricDesc')}</p>
               </div>
               <button
                 type="button"
@@ -185,24 +221,24 @@ export function SettingsPage({ isConnected, onDisconnect }: SettingsPageProps) {
         {vaultId && (
           <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
             <div className="p-4 border-b border-gray-100">
-              <h3 className="font-semibold text-gray-900">Senkronizasyon</h3>
+              <h3 className="font-semibold text-gray-900">{t('settings.sync')}</h3>
               <div className="flex items-center gap-2 mt-1">
                 {isConnected ? (
                   <>
                     <Wifi size={14} className="text-green-500" />
-                    <p className="text-xs text-green-600">Bağlı - Otomatik senkronizasyon aktif</p>
+                    <p className="text-xs text-green-600">{t('settings.syncConnected')}</p>
                   </>
                 ) : (
                   <>
                     <WifiOff size={14} className="text-gray-400" />
-                    <p className="text-xs text-gray-500">Bağlantı kurulamadı</p>
+                    <p className="text-xs text-gray-500">{t('settings.syncDisconnected')}</p>
                   </>
                 )}
               </div>
             </div>
 
             <div className="px-4 py-3 border-b border-gray-50">
-              <p className="text-xs text-gray-500">Kasa ID</p>
+              <p className="text-xs text-gray-500">{t('settings.vaultId')}</p>
               <p className="text-sm font-mono text-gray-700 mt-0.5">
                 {vaultId.slice(0, 8)}...{vaultId.slice(-4)}
               </p>
@@ -215,8 +251,8 @@ export function SettingsPage({ isConnected, onDisconnect }: SettingsPageProps) {
             >
               <Unlink size={20} className="text-red-500" />
               <div>
-                <p className="text-sm font-medium text-red-600">Eşleştirmeyi Kaldır</p>
-                <p className="text-xs text-gray-500">Cihazlar arası senkronizasyonu durdur</p>
+                <p className="text-sm font-medium text-red-600">{t('settings.unpair')}</p>
+                <p className="text-xs text-gray-500">{t('settings.unpairDesc')}</p>
               </div>
             </button>
           </div>
@@ -225,8 +261,8 @@ export function SettingsPage({ isConnected, onDisconnect }: SettingsPageProps) {
         {/* Veri Yönetimi */}
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
           <div className="p-4 border-b border-gray-100">
-            <h3 className="font-semibold text-gray-900">Veri Yönetimi</h3>
-            <p className="text-xs text-gray-500 mt-0.5">Toplam {transactions.length} işlem kaydı</p>
+            <h3 className="font-semibold text-gray-900">{t('settings.data')}</h3>
+            <p className="text-xs text-gray-500 mt-0.5">{tp('settings.dataCount', transactions.length)}</p>
           </div>
 
           <button
@@ -236,8 +272,8 @@ export function SettingsPage({ isConnected, onDisconnect }: SettingsPageProps) {
           >
             <Download size={20} className="text-vault-600" />
             <div>
-              <p className="text-sm font-medium text-gray-900">Verileri Dışa Aktar</p>
-              <p className="text-xs text-gray-500">Tüm işlemlerinizi JSON dosyası olarak indirin</p>
+              <p className="text-sm font-medium text-gray-900">{t('settings.export')}</p>
+              <p className="text-xs text-gray-500">{t('settings.exportDesc')}</p>
             </div>
           </button>
 
@@ -248,8 +284,8 @@ export function SettingsPage({ isConnected, onDisconnect }: SettingsPageProps) {
           >
             <Upload size={20} className="text-vault-600" />
             <div>
-              <p className="text-sm font-medium text-gray-900">Verileri İçe Aktar</p>
-              <p className="text-xs text-gray-500">Daha önce dışa aktarılmış JSON dosyasını yükleyin</p>
+              <p className="text-sm font-medium text-gray-900">{t('settings.import')}</p>
+              <p className="text-xs text-gray-500">{t('settings.importDesc')}</p>
             </div>
           </button>
           <input
@@ -267,31 +303,32 @@ export function SettingsPage({ isConnected, onDisconnect }: SettingsPageProps) {
           >
             <Trash2 size={20} className="text-red-500" />
             <div>
-              <p className="text-sm font-medium text-red-600">Tüm Verileri Sil</p>
-              <p className="text-xs text-gray-500">Bu işlem geri alınamaz</p>
+              <p className="text-sm font-medium text-red-600">{t('settings.clear')}</p>
+              <p className="text-xs text-gray-500">{t('settings.clearDesc')}</p>
             </div>
           </button>
         </div>
 
         {importStatus && (
           <div className={`rounded-lg p-3 text-sm ${importStatus.ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-            {importStatus.message}
+            {t(importStatus.messageKey)}
           </div>
         )}
 
         {/* Uygulama Bilgisi */}
         <div className="bg-white border border-gray-200 rounded-xl p-4 text-center">
+          {/* Marka adı - çevrilmez */}
           <p className="font-bold text-vault-800 text-lg">BenimKasam</p>
-          <p className="text-xs text-gray-400 mt-1">Kişisel Kasa Takip Uygulaması</p>
+          <p className="text-xs text-gray-400 mt-1">{t('settings.tagline')}</p>
           <p className="text-[10px] text-gray-300 mt-2">v1.1.0</p>
         </div>
       </div>
 
       {showClearConfirm && (
         <ConfirmModal
-          title="Tüm Verileri Sil"
-          message="Tüm işlem kayıtlarınız kalıcı olarak silinecek. Bu işlem geri alınamaz!"
-          confirmLabel="Hepsini Sil"
+          title={t('settings.clear')}
+          message={t('settings.clearMessage')}
+          confirmLabel={t('settings.clearConfirm')}
           onConfirm={handleClearAll}
           onCancel={() => setShowClearConfirm(false)}
         />
@@ -299,9 +336,9 @@ export function SettingsPage({ isConnected, onDisconnect }: SettingsPageProps) {
 
       {showDisconnectConfirm && (
         <ConfirmModal
-          title="Eşleştirmeyi Kaldır"
-          message="Cihazlar arası otomatik senkronizasyon durdurulacak. Yerel verileriniz silinmez."
-          confirmLabel="Kaldır"
+          title={t('settings.unpair')}
+          message={t('settings.unpairMessage')}
+          confirmLabel={t('settings.unpairConfirm')}
           onConfirm={handleDisconnect}
           onCancel={() => setShowDisconnectConfirm(false)}
         />

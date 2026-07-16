@@ -3,6 +3,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { X, Share2, Loader2 } from 'lucide-react';
 import { useVaultStore } from '../../store/vaultStore';
 import { syncService } from '../../services/firebaseSyncService';
+import { useT } from '../../hooks/useT';
 
 interface QrGenerateModalProps {
   onClose: () => void;
@@ -11,6 +12,7 @@ interface QrGenerateModalProps {
 
 export function QrGenerateModal({ onClose, onConnect }: QrGenerateModalProps) {
   const transactions = useVaultStore((s) => s.transactions);
+  const { t, tp } = useT();
   const [vaultId, setVaultId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
 
@@ -46,7 +48,7 @@ export function QrGenerateModal({ onClose, onConnect }: QrGenerateModalProps) {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl p-5 w-full max-w-sm shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-gray-900">QR ile Eşleştir</h3>
+          <h3 className="text-lg font-bold text-gray-900">{t('qr.pairTitle')}</h3>
           <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600">
             <X size={20} />
           </button>
@@ -55,7 +57,7 @@ export function QrGenerateModal({ onClose, onConnect }: QrGenerateModalProps) {
         {uploading ? (
           <div className="flex flex-col items-center py-8">
             <Loader2 size={32} className="text-vault-600 animate-spin mb-3" />
-            <p className="text-sm text-gray-500">Veriler yükleniyor...</p>
+            <p className="text-sm text-gray-500">{t('qr.uploading')}</p>
           </div>
         ) : qrContent ? (
           <>
@@ -63,10 +65,10 @@ export function QrGenerateModal({ onClose, onConnect }: QrGenerateModalProps) {
               <QRCodeSVG value={qrContent} size={280} level="M" />
             </div>
             <p className="text-center text-sm text-gray-500 mt-3">
-              {transactions.length} işlem senkronize edildi
+              {tp('qr.synced', transactions.length)}
             </p>
             <p className="text-center text-xs text-gray-400 mt-1">
-              Diğer telefondaki BenimKasam'dan bu QR'ı okutun
+              {t('qr.scanHint')}
             </p>
             {'share' in navigator && (
               <button
@@ -74,7 +76,7 @@ export function QrGenerateModal({ onClose, onConnect }: QrGenerateModalProps) {
                 className="w-full mt-4 flex items-center justify-center gap-2 py-2.5 bg-vault-800 text-white rounded-xl text-sm font-medium hover:bg-vault-700 transition-colors"
               >
                 <Share2 size={16} />
-                Paylaş
+                {t('qr.share')}
               </button>
             )}
           </>

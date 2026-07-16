@@ -1,19 +1,24 @@
 import { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { X, CheckCircle, AlertCircle, Camera, Loader2 } from 'lucide-react';
+import { useT } from '../../hooks/useT';
+import type { TKey } from '../../i18n';
 
 interface QrScanModalProps {
   onClose: () => void;
   onConnect: (vaultId: string) => void;
 }
 
+// State çevrilmiş METİN değil ANAHTAR tutar: metin tutsaydı `t` effect'in
+// bağımlılığı olurdu ve dil değişiminde kamera tarayıcısı yeniden başlardı.
 type ScanState =
   | { status: 'scanning' }
   | { status: 'connecting' }
   | { status: 'success'; vaultId: string }
-  | { status: 'error'; message: string };
+  | { status: 'error'; messageKey: TKey };
 
 export function QrScanModal({ onClose, onConnect }: QrScanModalProps) {
+  const { t } = useT();
   const [state, setState] = useState<ScanState>({ status: 'scanning' });
   const processedRef = useRef(false);
 
@@ -47,9 +52,9 @@ export function QrScanModal({ onClose, onConnect }: QrScanModalProps) {
           } catch {
             // Eski format olabilir (1:compressed...) veya geçersiz QR
             if (decodedText.startsWith('1:')) {
-              setState({ status: 'error', message: 'Bu eski formatta bir QR kodu. Lütfen diğer cihazda yeni QR oluşturun.' });
+              setState({ status: 'error', messageKey: 'qr.errorOldFormat' });
             } else {
-              setState({ status: 'error', message: 'Geçersiz QR kodu. BenimKasam QR kodu olduğundan emin olun.' });
+              setState({ status: 'error', messageKey: 'qr.errorInvalid' });
             }
           }
         },
@@ -60,7 +65,7 @@ export function QrScanModal({ onClose, onConnect }: QrScanModalProps) {
       .catch(() => {
         setState({
           status: 'error',
-          message: 'Kamera açılamadı. Tarayıcı ayarlarından kamera iznini kontrol edin.',
+          messageKey: 'qr.errorCamera',
         });
       });
 
@@ -81,7 +86,7 @@ export function QrScanModal({ onClose, onConnect }: QrScanModalProps) {
         <>
           <div className="flex items-center gap-2 text-white mb-4">
             <Camera size={20} />
-            <p className="text-sm font-medium">QR kodu kameraya gösterin</p>
+            <p className="text-sm font-medium">{t('qr.showToCamera')}</p>
           </div>
           <div
             id="qr-reader"
@@ -91,7 +96,7 @@ export function QrScanModal({ onClose, onConnect }: QrScanModalProps) {
             onClick={onClose}
             className="mt-6 px-6 py-2.5 border border-white/30 text-white rounded-xl text-sm font-medium hover:bg-white/10 transition-colors"
           >
-            İptal
+            {t('common.cancel')}
           </button>
         </>
       )}
@@ -99,23 +104,23 @@ export function QrScanModal({ onClose, onConnect }: QrScanModalProps) {
       {state.status === 'connecting' && (
         <div className="bg-white rounded-2xl p-6 mx-4 max-w-sm w-full text-center">
           <Loader2 size={48} className="text-vault-600 animate-spin mx-auto mb-3" />
-          <h3 className="text-lg font-bold text-gray-900 mb-2">Bağlanıyor...</h3>
-          <p className="text-sm text-gray-600">Veriler senkronize ediliyor</p>
+          <h3 className="text-lg font-bold text-gray-900 mb-2">{t('qr.connecting')}</h3>
+          <p className="text-sm text-gray-600">{t('qr.connectingDesc')}</p>
         </div>
       )}
 
       {state.status === 'success' && (
         <div className="bg-white rounded-2xl p-6 mx-4 max-w-sm w-full text-center">
           <CheckCircle size={48} className="text-green-500 mx-auto mb-3" />
-          <h3 className="text-lg font-bold text-gray-900 mb-2">Eşleştirme Başarılı!</h3>
+          <h3 className="text-lg font-bold text-gray-900 mb-2">{t('qr.successTitle')}</h3>
           <p className="text-sm text-gray-600">
-            Cihazlar senkronize edildi. Artık yapılan değişiklikler otomatik olarak diğer cihaza aktarılacak.
+            {t('qr.successDesc')}
           </p>
           <button
             onClick={onClose}
             className="w-full mt-4 py-2.5 bg-vault-800 text-white rounded-xl text-sm font-medium hover:bg-vault-700 transition-colors"
           >
-            Tamam
+            {t('common.ok')}
           </button>
         </div>
       )}
@@ -123,13 +128,13 @@ export function QrScanModal({ onClose, onConnect }: QrScanModalProps) {
       {state.status === 'error' && (
         <div className="bg-white rounded-2xl p-6 mx-4 max-w-sm w-full text-center">
           <AlertCircle size={48} className="text-red-500 mx-auto mb-3" />
-          <h3 className="text-lg font-bold text-gray-900 mb-2">Hata</h3>
-          <p className="text-sm text-gray-600">{state.message}</p>
+          <h3 className="text-lg font-bold text-gray-900 mb-2">{t('common.error')}</h3>
+          <p className="text-sm text-gray-600">{t(state.messageKey)}</p>
           <button
             onClick={onClose}
             className="w-full mt-4 py-2.5 bg-vault-800 text-white rounded-xl text-sm font-medium hover:bg-vault-700 transition-colors"
           >
-            Kapat
+            {t('common.close')}
           </button>
         </div>
       )}

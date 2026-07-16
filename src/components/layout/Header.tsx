@@ -1,6 +1,8 @@
 import { RefreshCw, Vault, Clock } from 'lucide-react';
 import { useVaultStore } from '../../store/vaultStore';
 import { useState, useEffect } from 'react';
+import { useT } from '../../hooks/useT';
+import type { Locale } from '../../utils/formatters';
 
 // Truncgil "2026-07-13 19:59:01" (yerel saat) ve ISO formatını tolere eder
 function getAgeMinutes(dateStr: string): number {
@@ -9,13 +11,30 @@ function getAgeMinutes(dateStr: string): number {
   return Math.max(0, Math.floor((Date.now() - t) / 60000));
 }
 
-function getTimeAgo(dateStr: string): string {
+// Anahtar locale'i içermeli, yoksa ilk dil sonsuza kadar yapışır (bkz. formatters.ts).
+const rtfCache = new Map<Locale, Intl.RelativeTimeFormat>();
+function getRtf(locale: Locale): Intl.RelativeTimeFormat {
+  let fmt = rtfCache.get(locale);
+  if (!fmt) {
+    fmt = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
+    rtfCache.set(locale, fmt);
+  }
+  return fmt;
+}
+
+/**
+ * "5 dakika önce" / "5 minutes ago".
+ * Elle kurulan metin yerine Intl: tekil/çoğul ('1 saat önce' / '5 hours ago')
+ * ve idiomatik biçimler ('dün' / 'yesterday', 'şimdi' / 'now') CLDR'den gelir.
+ */
+function formatTimeAgo(dateStr: string, locale: Locale): string {
   const minutes = getAgeMinutes(dateStr);
-  if (minutes < 1) return 'az önce';
-  if (minutes < 60) return `${minutes} dk önce`;
+  const rtf = getRtf(locale);
+  if (minutes < 1) return rtf.format(0, 'second'); // "şimdi" / "now"
+  if (minutes < 60) return rtf.format(-minutes, 'minute');
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} saat önce`;
-  return `${Math.floor(hours / 24)} gün önce`;
+  if (hours < 24) return rtf.format(-hours, 'hour');
+  return rtf.format(-Math.floor(hours / 24), 'day');
 }
 
 // Piyasa verisi 45 dk'dan eskiyse muhtemelen piyasa kapalı / veri donmuş
@@ -27,6 +46,7 @@ export function Header() {
   const marketTimestamp = useVaultStore((s) => s.marketTimestamp);
   const liveRates = useVaultStore((s) => s.liveRates);
   const rateSources = useVaultStore((s) => s.rateSources);
+  const { t, locale } = useT();
   const [, setTick] = useState(0);
 
   // Her 30 saniyede "X dk önce" metnini güncelle
@@ -35,7 +55,7 @@ export function Header() {
     return () => clearInterval(interval);
   }, []);
 
-  const timeAgo = marketTimestamp ? getTimeAgo(marketTimestamp) : null;
+  const timeAgo = marketTimestamp ? formatTimeAgo(marketTimestamp, locale) : null;
   const isStale = marketTimestamp ? getAgeMinutes(marketTimestamp) >= STALE_AFTER_MIN : false;
   const hasRates = liveRates.length > 0;
 
@@ -51,7 +71,7 @@ export function Header() {
           onClick={refreshRates}
           disabled={isLoadingRates}
           className="p-1.5 rounded-lg hover:bg-vault-700 transition-colors disabled:opacity-50"
-          title="Kurları Güncelle"
+          title={t('header.refresh')}
         >
           <RefreshCw size={18} className={isLoadingRates ? 'animate-spin' : ''} />
         </button>
@@ -60,11 +80,13 @@ export function Header() {
         <div className="flex items-center gap-1 mt-1">
           <Clock size={10} className={isStale ? 'text-amber-400' : 'text-vault-400'} />
           <span className={`text-[10px] ${!hasRates ? 'text-red-400' : isStale ? 'text-amber-400' : 'text-vault-300'}`}>
+            {/* timeAgo hazır metin olarak DEĞİŞKEN geçilir; string birleştirmede
+                "Piyasa:" öneki İngilizceye taşınamazdı. */}
             {!hasRates
-              ? 'Kur verileri alınamadı'
+              ? t('header.ratesUnavailable')
               : isStale
-                ? `Piyasa: ${timeAgo} (kapalı olabilir)`
-                : `Piyasa: ${timeAgo}`}
+                ? t('header.marketStale', { timeAgo })
+                : t('header.market', { timeAgo })}
           </span>
           {hasRates && rateSources.length > 0 && (
             <span className="text-[9px] text-vault-500 ml-1">
@@ -73,7 +95,7 @@ export function Header() {
           )}
           {!hasRates && (
             <button type="button" onClick={refreshRates} className="text-[10px] text-gold-400 underline ml-1">
-              Tekrar dene
+              {t('header.retry')}
             </button>
           )}
         </div>

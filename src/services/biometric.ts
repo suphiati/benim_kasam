@@ -1,8 +1,16 @@
 import { Capacitor } from '@capacitor/core';
 import { Preferences } from '@capacitor/preferences';
 import { BiometricAuth } from '@aparajita/capacitor-biometric-auth';
+import { useVaultStore } from '../store/vaultStore';
+import { translate, type TKey } from '../i18n';
 
 const LOCK_ENABLED_KEY = 'biometric_lock_enabled';
+
+// Servis olduğu için hook kullanamaz; dili store'dan anlık okur.
+// authenticate() kullanıcı etkileşimiyle çağrıldığından store hazır olur.
+function t(key: TKey): string {
+  return translate(useVaultStore.getState().language, key);
+}
 
 export function isNative(): boolean {
   return Capacitor.isNativePlatform();
@@ -31,12 +39,12 @@ export async function getBiometricStatus(): Promise<BiometricStatus> {
 export async function authenticate(): Promise<boolean> {
   try {
     await BiometricAuth.authenticate({
-      reason: 'Kasanıza erişmek için kimliğinizi doğrulayın',
-      cancelTitle: 'İptal',
+      reason: t('lock.reason'),
+      cancelTitle: t('common.cancel'),
       allowDeviceCredential: true, // biyometri yoksa/başarısızsa PIN/şifre
-      iosFallbackTitle: 'Şifre kullan',
-      androidTitle: 'BenimKasam',
-      androidSubtitle: 'Kimliğinizi doğrulayın',
+      iosFallbackTitle: t('lock.iosFallback'),
+      androidTitle: 'BenimKasam', // marka adı - çevrilmez
+      androidSubtitle: t('lock.androidSubtitle'),
       androidConfirmationRequired: false,
     });
     return true;

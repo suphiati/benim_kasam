@@ -1,14 +1,14 @@
 import { useState, useMemo } from 'react';
 import type { AssetType, Transaction } from '../types';
 import { useVaultStore } from '../store/vaultStore';
-import { ASSET_CONFIG } from '../constants/assets';
+import { assetUnit } from '../constants/assets';
 import { FilterBar } from '../components/transactions/FilterBar';
 import { TransactionCard } from '../components/transactions/TransactionCard';
 import { ConfirmModal } from '../components/common/ConfirmModal';
 import { TransactionForm } from '../components/form/TransactionForm';
-import { formatNumber } from '../utils/formatters';
 import { getFxToday, toBase } from '../utils/currency';
 import { useCurrency } from '../hooks/useCurrency';
+import { useT } from '../hooks/useT';
 import { List, X, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
 
 export function TransactionsPage() {
@@ -16,6 +16,7 @@ export function TransactionsPage() {
   const deleteTransaction = useVaultStore((s) => s.deleteTransaction);
   const liveRates = useVaultStore((s) => s.liveRates);
   const { format, currency } = useCurrency();
+  const { t, tp, formatNumber } = useT();
   const fxToday = useMemo(() => getFxToday(liveRates), [liveRates]);
 
   const [filter, setFilter] = useState<AssetType | null>(null);
@@ -44,9 +45,10 @@ export function TransactionsPage() {
     const totalBuyAmount = buys.reduce((s, t) => s + t.amount, 0);
     const totalSellAmount = sells.reduce((s, t) => s + t.amount, 0);
 
-    const unit = filter ? ASSET_CONFIG[filter].unit : null;
+    // Görünen birim çeviriden gelir (rozet için kullanılan config.unit'ten değil).
+    const unit = filter ? assetUnit(filter, t) : null;
     return { totalBuyCost, totalSellRevenue, totalBuyAmount, totalSellAmount, unit, buyCount: buys.length, sellCount: sells.length };
-  }, [filtered, filter, currency, fxToday]);
+  }, [filtered, filter, currency, fxToday, t]);
 
   const handleDelete = () => {
     if (deleteId) {
@@ -59,9 +61,10 @@ export function TransactionsPage() {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
         <List size={64} className="text-gray-300 mb-4" />
-        <h2 className="text-lg font-semibold text-gray-500 mb-1">Henüz İşlem Yok</h2>
+        <h2 className="text-lg font-semibold text-gray-500 mb-1">{t('tx.empty')}</h2>
         <p className="text-sm text-gray-400">
-          İlk işleminizi eklemek için "Ekle" sekmesine gidin.
+          {/* Sekme adı TabBar ile aynı anahtardan - bkz. VaultPage. */}
+          {t('tx.emptyHint', { tab: t('nav.add') })}
         </p>
       </div>
     );
@@ -69,23 +72,24 @@ export function TransactionsPage() {
 
   return (
     <div className="flex-1 overflow-y-auto p-4">
-      <h2 className="text-lg font-bold text-gray-900 mb-3">İşlemlerim ({transactions.length})</h2>
+      <h2 className="text-lg font-bold text-gray-900 mb-3">{t('tx.title', { n: transactions.length })}</h2>
 
       {/* Varlık filtresi */}
       <FilterBar selected={filter} onSelect={setFilter} />
 
       {/* Alım/Satım filtresi */}
       <div className="flex gap-2 mt-2">
-        {(['all', 'buy', 'sell'] as const).map((t) => (
+        {/* `ft`: `t` çeviri fonksiyonunu gölgelemesin */}
+        {(['all', 'buy', 'sell'] as const).map((ft) => (
           <button
-            key={t}
+            key={ft}
             type="button"
-            onClick={() => setTypeFilter(t)}
+            onClick={() => setTypeFilter(ft)}
             className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-              typeFilter === t ? 'bg-vault-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              typeFilter === ft ? 'bg-vault-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
-            {t === 'all' ? 'Tümü' : t === 'buy' ? 'Alımlar' : 'Satımlar'}
+            {ft === 'all' ? t('tx.filterAll') : ft === 'buy' ? t('tx.filterBuys') : t('tx.filterSells')}
           </button>
         ))}
       </div>
@@ -94,14 +98,20 @@ export function TransactionsPage() {
       {filterSummary && (
         <div className="mt-3 bg-gray-50 rounded-xl p-3 text-xs space-y-1">
           <div className="flex items-center justify-between">
-            <span className="text-gray-500 font-medium">Filtrelenmiş Özet ({filtered.length} işlem)</span>
+            <span className="text-gray-500 font-medium">{tp('tx.summary', filtered.length)}</span>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div className="flex items-center gap-1">
               <ArrowDownCircle size={12} className="text-green-500" />
+              {/* Miktarlı/miktarsız AYRI tam anahtar: parantezli eki koşullu
+                  eklemek İngilizce tekil/çoğulla birlikte bozulurdu. */}
               <span className="text-gray-600">
-                {filterSummary.buyCount} alım
-                {filterSummary.unit && ` (${formatNumber(filterSummary.totalBuyAmount)} ${filterSummary.unit})`}
+                {filterSummary.unit
+                  ? tp('tx.buyCountWithAmount', filterSummary.buyCount, {
+                      amount: formatNumber(filterSummary.totalBuyAmount),
+                      unit: filterSummary.unit,
+                    })
+                  : tp('tx.buyCount', filterSummary.buyCount)}
               </span>
             </div>
             <div className="text-right font-medium text-gray-800">
@@ -112,8 +122,12 @@ export function TransactionsPage() {
                 <div className="flex items-center gap-1">
                   <ArrowUpCircle size={12} className="text-red-500" />
                   <span className="text-gray-600">
-                    {filterSummary.sellCount} satım
-                    {filterSummary.unit && ` (${formatNumber(filterSummary.totalSellAmount)} ${filterSummary.unit})`}
+                    {filterSummary.unit
+                      ? tp('tx.sellCountWithAmount', filterSummary.sellCount, {
+                          amount: formatNumber(filterSummary.totalSellAmount),
+                          unit: filterSummary.unit,
+                        })
+                      : tp('tx.sellCount', filterSummary.sellCount)}
                   </span>
                 </div>
                 <div className="text-right font-medium text-gray-800">
@@ -138,14 +152,14 @@ export function TransactionsPage() {
 
       {filtered.length === 0 && (
         <p className="text-center text-sm text-gray-400 mt-8">
-          Bu filtrelere uygun işlem bulunmuyor.
+          {t('tx.noMatch')}
         </p>
       )}
 
       {deleteId && (
         <ConfirmModal
-          title="İşlemi Sil"
-          message="Bu işlemi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
+          title={t('tx.deleteTitle')}
+          message={t('tx.deleteMessage')}
           onConfirm={handleDelete}
           onCancel={() => setDeleteId(null)}
         />
@@ -155,8 +169,8 @@ export function TransactionsPage() {
         <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-[100]" onClick={() => setEditingTx(null)}>
           <div className="bg-white rounded-t-2xl sm:rounded-2xl p-5 w-full max-w-md max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-900">İşlemi Düzenle</h3>
-              <button type="button" onClick={() => setEditingTx(null)} className="p-1 text-gray-400 hover:text-gray-600" title="Kapat">
+              <h3 className="text-lg font-bold text-gray-900">{t('tx.editTitle')}</h3>
+              <button type="button" onClick={() => setEditingTx(null)} className="p-1 text-gray-400 hover:text-gray-600" title={t('common.close')}>
                 <X size={20} />
               </button>
             </div>

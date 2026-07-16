@@ -1,3 +1,5 @@
+import { useT } from '../../hooks/useT';
+
 interface ConfirmModalProps {
   title: string;
   message: string;
@@ -6,7 +8,11 @@ interface ConfirmModalProps {
   onCancel: () => void;
 }
 
-export function ConfirmModal({ title, message, confirmLabel = 'Sil', onConfirm, onCancel }: ConfirmModalProps) {
+export function ConfirmModal({ title, message, confirmLabel, onConfirm, onCancel }: ConfirmModalProps) {
+  const { t } = useT();
+  // Varsayılan artık parametre değil: hook'a gövdede erişiyoruz.
+  const confirmText = confirmLabel ?? t('common.delete');
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4" onClick={onCancel}>
       <div className="bg-white rounded-2xl p-5 w-full max-w-sm shadow-xl" onClick={(e) => e.stopPropagation()}>
@@ -17,13 +23,13 @@ export function ConfirmModal({ title, message, confirmLabel = 'Sil', onConfirm, 
             onClick={onCancel}
             className="flex-1 py-2.5 rounded-xl border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors"
           >
-            İptal
+            {t('common.cancel')}
           </button>
           <button
             onClick={onConfirm}
             className="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors"
           >
-            {confirmLabel}
+            {confirmText}
           </button>
         </div>
       </div>

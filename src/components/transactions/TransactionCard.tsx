@@ -1,8 +1,8 @@
 import { Trash2, Pencil, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
 import type { Transaction } from '../../types';
-import { ASSET_CONFIG } from '../../constants/assets';
-import { formatNumber, formatDate } from '../../utils/formatters';
+import { ASSET_CONFIG, assetLabelKey, assetUnit } from '../../constants/assets';
 import { useCurrency } from '../../hooks/useCurrency';
+import { useT } from '../../hooks/useT';
 import { isFxApprox } from '../../utils/currency';
 
 interface TransactionCardProps {
@@ -13,7 +13,10 @@ interface TransactionCardProps {
 
 export function TransactionCard({ transaction, onDelete, onEdit }: TransactionCardProps) {
   const { fromTry, currency } = useCurrency();
+  const { t, formatNumber, formatDate } = useT();
   const config = ASSET_CONFIG[transaction.assetType];
+  // Rozet config.unit'ten (sabit, çevrilmez), görünen birim çeviriden.
+  const unit = assetUnit(transaction.assetType, t);
   const isBuy = transaction.type === 'buy' || !transaction.type;
   // Geçmiş işlem, işlemin KENDİ günündeki kurla gösterilir - bugünküyle değil.
   const approx = isFxApprox(transaction, currency);
@@ -35,9 +38,9 @@ export function TransactionCard({ transaction, onDelete, onEdit }: TransactionCa
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <p className="text-sm font-semibold text-gray-900">{config.label}</p>
+              <p className="text-sm font-semibold text-gray-900">{t(assetLabelKey(transaction.assetType))}</p>
               <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${isBuy ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                {isBuy ? 'ALIM' : 'SATIM'}
+                {isBuy ? t('tx.badge.buy') : t('tx.badge.sell')}
               </span>
             </div>
             <p className="text-xs text-gray-500">{formatDate(transaction.date)}</p>
@@ -46,7 +49,7 @@ export function TransactionCard({ transaction, onDelete, onEdit }: TransactionCa
         <div className="flex items-center gap-1">
           <button
             type="button"
-            title="Düzenle"
+            title={t('common.edit')}
             onClick={() => onEdit(transaction)}
             className="p-1.5 text-gray-400 hover:text-vault-600 rounded-lg hover:bg-gray-50 transition-colors"
           >
@@ -54,7 +57,7 @@ export function TransactionCard({ transaction, onDelete, onEdit }: TransactionCa
           </button>
           <button
             type="button"
-            title="Sil"
+            title={t('common.delete')}
             onClick={() => onDelete(transaction.id)}
             className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-gray-50 transition-colors"
           >
@@ -64,15 +67,17 @@ export function TransactionCard({ transaction, onDelete, onEdit }: TransactionCa
       </div>
       <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
         <div>
-          <p className="text-gray-400">Miktar</p>
-          <p className="font-medium">{formatNumber(transaction.amount)} {config.unit}</p>
+          <p className="text-gray-400">{t('tx.amount')}</p>
+          <p className="font-medium">{formatNumber(transaction.amount)} {unit}</p>
         </div>
         <div>
-          <p className="text-gray-400">{isBuy ? 'Alış' : 'Satış'} Fiyatı</p>
+          {/* Her dal TAM anahtar: 'Alış'/'Satış' + ' Fiyatı' birleştirmesi
+              İngilizcede kelime sırası yüzünden bozulurdu. */}
+          <p className="text-gray-400">{isBuy ? t('tx.priceLabel.buy') : t('tx.priceLabel.sell')}</p>
           <p className="font-medium">{fromTry(transaction.unitPrice, transaction.fxSnapshot)}</p>
         </div>
         <div className="text-right">
-          <p className="text-gray-400">Toplam{approx && <span title="Kur damgası yok, bugünkü kurla yaklaşık gösteriliyor"> ~</span>}</p>
+          <p className="text-gray-400">{t('tx.total')}{approx && <span title={t('tx.approxTitle')}> ~</span>}</p>
           <p className={`font-bold ${isBuy ? 'text-gray-900' : 'text-red-600'}`}>{fromTry(transaction.totalCost, transaction.fxSnapshot)}</p>
         </div>
       </div>

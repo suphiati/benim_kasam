@@ -3,7 +3,8 @@ import type { AssetType, Transaction, TransactionType } from '../../types';
 import { useVaultStore } from '../../store/vaultStore';
 import { AssetTypePicker } from './AssetTypePicker';
 import { formatCurrency, todayISO } from '../../utils/formatters';
-import { getFxToday, toBase } from '../../utils/currency';
+import { getFxToday, toBase, CURRENCY_META } from '../../utils/currency';
+import { useT } from '../../hooks/useT';
 import { Save, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
 
 interface TransactionFormProps {
@@ -16,6 +17,7 @@ export function TransactionForm({ editingTransaction, onSaved }: TransactionForm
   const editTransaction = useVaultStore((s) => s.editTransaction);
   const liveRates = useVaultStore((s) => s.liveRates);
   const baseCurrency = useVaultStore((s) => s.baseCurrency);
+  const { t, locale } = useT();
   const fxToday = useMemo(() => getFxToday(liveRates), [liveRates]);
 
   const [txType, setTxType] = useState<TransactionType>(editingTransaction?.type ?? 'buy');
@@ -91,7 +93,7 @@ export function TransactionForm({ editingTransaction, onSaved }: TransactionForm
           }`}
         >
           <ArrowDownCircle size={18} />
-          Alım
+          {t('form.buy')}
         </button>
         <button
           type="button"
@@ -103,17 +105,17 @@ export function TransactionForm({ editingTransaction, onSaved }: TransactionForm
           }`}
         >
           <ArrowUpCircle size={18} />
-          Satım
+          {t('form.sell')}
         </button>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Varlık Tipi</label>
+        <label className="block text-sm font-medium text-gray-700 mb-2">{t('form.assetType')}</label>
         <AssetTypePicker selected={assetType} onSelect={setAssetType} />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Tarih</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">{t('form.date')}</label>
         <input
           type="date"
           value={date}
@@ -124,7 +126,7 @@ export function TransactionForm({ editingTransaction, onSaved }: TransactionForm
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Miktar</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">{t('form.amount')}</label>
           <input
             type="number"
             step="any"
@@ -136,8 +138,12 @@ export function TransactionForm({ editingTransaction, onSaved }: TransactionForm
           />
         </div>
         <div>
+          {/* Her dal TAM anahtar (parça birleştirme yok) + sembol düz metinde
+              değil enterpolasyonla: giriş her zaman TRY. */}
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            {txType === 'buy' ? 'Alış' : 'Satış'} Fiyatı (₺)
+            {txType === 'buy'
+              ? t('form.priceLabel.buy', { sym: CURRENCY_META.TRY.symbol })
+              : t('form.priceLabel.sell', { sym: CURRENCY_META.TRY.symbol })}
           </label>
           <input
             type="number"
@@ -153,27 +159,28 @@ export function TransactionForm({ editingTransaction, onSaved }: TransactionForm
 
       {amount && unitPrice && (
         <div className={`rounded-lg p-3 text-sm ${txType === 'buy' ? 'bg-green-50' : 'bg-red-50'}`}>
-          <span className="text-gray-500">Toplam {txType === 'buy' ? 'Maliyet' : 'Gelir'}: </span>
+          <span className="text-gray-500">{txType === 'buy' ? t('form.total.buy') : t('form.total.sell')} </span>
           <span className={`font-bold ${txType === 'buy' ? 'text-green-700' : 'text-red-700'}`}>
             {/* Giriş her zaman TRY: fiyatlar Kapalıçarşı'dan ₺ geliyor ve işlem ₺ ile yapılıyor.
-                Taban para yalnızca raporlama katmanı - burada bilinçli olarak TRY sabit. */}
-            {formatCurrency(previewTotal, 'TRY')}
+                Taban para yalnızca raporlama katmanı - burada bilinçli olarak TRY sabit.
+                Locale yine de geçilir: ayıraçlar dile göre değişir (1.234,56 / 1,234.56). */}
+            {formatCurrency(previewTotal, 'TRY', locale)}
           </span>
           {baseCurrency !== 'TRY' && (
             <span className="text-gray-400 ml-1">
-              ≈ {formatCurrency(toBase(previewTotal, fxToday, baseCurrency), baseCurrency)}
+              ≈ {formatCurrency(toBase(previewTotal, fxToday, baseCurrency), baseCurrency, locale)}
             </span>
           )}
         </div>
       )}
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Not (opsiyonel)</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">{t('form.note')}</label>
         <input
           type="text"
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          placeholder="Ör: Vakıfbank'tan alındı"
+          placeholder={t('form.notePlaceholder')}
           className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-vault-500 focus:border-transparent"
         />
       </div>
@@ -188,7 +195,11 @@ export function TransactionForm({ editingTransaction, onSaved }: TransactionForm
         }`}
       >
         <Save size={18} />
-        {editingTransaction ? 'Güncelle' : txType === 'buy' ? 'Alımı Kaydet' : 'Satımı Kaydet'}
+        {editingTransaction
+          ? t('form.submit.update')
+          : txType === 'buy'
+            ? t('form.submit.buy')
+            : t('form.submit.sell')}
       </button>
     </form>
   );

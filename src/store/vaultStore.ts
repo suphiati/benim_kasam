@@ -6,8 +6,10 @@ import { syncService } from '../services/firebaseSyncService';
 import { getFxForDate } from '../services/fxHistoryService';
 import { getFxToday } from '../utils/currency';
 import { todayISO } from '../utils/formatters';
+import { detectLang, type Lang } from '../i18n';
 
 const BASE_CURRENCY_KEY = 'benimkasam_base_currency';
+const LANG_KEY = 'benimkasam_lang';
 
 // Senkron oku: async olsaydı açılışta bir kare ₺ görünüp sonra $/€'ya atlardı.
 function loadBaseCurrency(): BaseCurrency {
@@ -20,6 +22,34 @@ function loadBaseCurrency(): BaseCurrency {
   return 'TRY';
 }
 
+// baseCurrency ile aynı örüntü, aynı sebep: async olsaydı açılışta bir kare
+// Türkçe görünüp İngilizceye atlardı. Öncelik: kayıtlı tercih > cihaz dili > tr.
+function loadLanguage(): Lang {
+  try {
+    const v = localStorage.getItem(LANG_KEY);
+    if (v === 'tr' || v === 'en') return v;
+  } catch {
+    // private mode / kota - cihaz diline düş
+  }
+  return detectLang();
+}
+
+/**
+ * <html lang> ekran okuyucular ve tarayıcı çeviri/heceleme için okur.
+ * index.html'de lang="tr" sabit yazıyor; dil runtime'da seçildiği için
+ * hem açılışta hem her değişimde buradan güncellenmeli.
+ */
+function applyDocumentLang(lang: Lang): void {
+  try {
+    document.documentElement.lang = lang;
+  } catch {
+    // document yoksa (test/SSR) sessiz geç
+  }
+}
+
+const initialLanguage = loadLanguage();
+applyDocumentLang(initialLanguage);
+
 interface VaultState {
   transactions: Transaction[];
   liveRates: LiveRate[];
@@ -29,6 +59,7 @@ interface VaultState {
   isLoadingRates: boolean;
   isInitialized: boolean;
   baseCurrency: BaseCurrency;      // yalnızca sunum: fiyatlar kaynakta hep TRY
+  language: Lang;                  // yalnızca sunum: kayıtlı veri dilden bağımsız
 
   init: () => Promise<void>;
   addTransaction: (tx: Omit<Transaction, 'id' | 'createdAt' | 'totalCost'>) => Promise<void>;
@@ -36,6 +67,7 @@ interface VaultState {
   editTransaction: (id: string, updates: Partial<Omit<Transaction, 'id' | 'createdAt'>>) => Promise<void>;
   refreshRates: () => Promise<void>;
   setBaseCurrency: (currency: BaseCurrency) => void;
+  setLanguage: (lang: Lang) => void;
   backfillFxSnapshots: () => Promise<void>;
   exportData: () => string;
   importData: (json: string) => Promise<void>;
@@ -53,6 +85,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
   isLoadingRates: false,
   isInitialized: false,
   baseCurrency: loadBaseCurrency(),
+  language: initialLanguage,
 
   init: async () => {
     if (get().isInitialized) return;
@@ -129,6 +162,16 @@ export const useVaultStore = create<VaultState>((set, get) => ({
       // saklayamasak da oturum içinde çalışsın
     }
     set({ baseCurrency: currency });
+  },
+
+  setLanguage: (lang) => {
+    try {
+      localStorage.setItem(LANG_KEY, lang);
+    } catch {
+      // saklayamasak da oturum içinde çalışsın
+    }
+    applyDocumentLang(lang);
+    set({ language: lang });
   },
 
   /**
