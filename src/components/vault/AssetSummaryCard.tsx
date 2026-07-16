@@ -1,13 +1,15 @@
 import { TrendingUp, TrendingDown, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
 import type { AssetSummary } from '../../types';
 import { ASSET_CONFIG } from '../../constants/assets';
-import { formatCurrency, formatNumber, formatPercent } from '../../utils/formatters';
+import { formatNumber, formatPercent } from '../../utils/formatters';
+import { useCurrency } from '../../hooks/useCurrency';
 
 interface AssetSummaryCardProps {
   summary: AssetSummary;
 }
 
 export function AssetSummaryCard({ summary }: AssetSummaryCardProps) {
+  const { format } = useCurrency();
   const config = ASSET_CONFIG[summary.assetType];
   const isProfit = summary.totalPL >= 0;
 
@@ -45,19 +47,19 @@ export function AssetSummaryCard({ summary }: AssetSummaryCardProps) {
       <div className="grid grid-cols-2 gap-y-2 text-xs">
         <div>
           <p className="text-gray-400">Ort. Maliyet</p>
-          <p className="font-medium text-gray-700">{formatCurrency(summary.avgUnitPrice)}</p>
+          <p className="font-medium text-gray-700">{format(summary.avgUnitPrice)}</p>
         </div>
         <div className="text-right">
           <p className="text-gray-400">Güncel Fiyat</p>
-          <p className="font-medium text-gray-700">{formatCurrency(summary.currentUnitPrice)}</p>
+          <p className="font-medium text-gray-700">{format(summary.currentUnitPrice)}</p>
         </div>
         <div>
           <p className="text-gray-400">Toplam Maliyet</p>
-          <p className="font-medium text-gray-700">{formatCurrency(summary.totalCost)}</p>
+          <p className="font-medium text-gray-700">{format(summary.totalCost)}</p>
         </div>
         <div className="text-right">
           <p className="text-gray-400">Güncel Değer</p>
-          <p className="font-medium text-gray-700">{formatCurrency(summary.currentValue)}</p>
+          <p className="font-medium text-gray-700">{format(summary.currentValue)}</p>
         </div>
       </div>
 
@@ -79,13 +81,13 @@ export function AssetSummaryCard({ summary }: AssetSummaryCardProps) {
         <div className="flex justify-between items-center text-sm">
           <span className="text-gray-500">Toplam K/Z</span>
           <span className={`font-bold ${isProfit ? 'text-green-600' : 'text-red-600'}`}>
-            {formatCurrency(summary.totalPL)}
+            {format(summary.totalPL)}
           </span>
         </div>
         {summary.realizedPL !== 0 && (
           <div className="flex justify-between items-center text-[10px] mt-1">
-            <span className="text-gray-400">Gerçekleşen: {formatCurrency(summary.realizedPL)}</span>
-            <span className="text-gray-400">Gerçekleşmemiş: {formatCurrency(summary.unrealizedPL)}</span>
+            <span className="text-gray-400">Gerçekleşen: {format(summary.realizedPL)}</span>
+            <span className="text-gray-400">Gerçekleşmemiş: {format(summary.unrealizedPL)}</span>
           </div>
         )}
       </div>

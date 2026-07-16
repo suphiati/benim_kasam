@@ -1,6 +1,6 @@
 import { ref, set, remove, onChildAdded, onChildChanged, onChildRemoved, type Unsubscribe, type Database } from 'firebase/database';
 import { getFirebaseDb, ensureAuth } from '../config/firebase';
-import type { Transaction } from '../types';
+import type { FxSnapshot, Transaction } from '../types';
 
 const VAULT_ID_KEY = 'benim_kasam_vault_id';
 
@@ -10,6 +10,9 @@ export interface RemoteChangeCallback {
   (type: RemoteChangeType, tx: Transaction): void;
 }
 
+// DİKKAT: database.rules.json'da "$other": { ".validate": false } var - beyaz liste katı.
+// Buraya alan eklerken KURALLARI DA güncelleyip deploy etmek şart, yoksa yazma reddedilir.
+// (id RTDB key'i, totalCost türetilmiş: ikisi de gövdede yok.)
 interface FirebaseTransaction {
   type: string;
   assetType: string;
@@ -18,6 +21,7 @@ interface FirebaseTransaction {
   unitPrice: number;
   note?: string;
   createdAt: string;
+  fxSnapshot?: FxSnapshot;
 }
 
 function toFirebase(tx: Transaction): FirebaseTransaction {
@@ -30,11 +34,12 @@ function toFirebase(tx: Transaction): FirebaseTransaction {
     createdAt: tx.createdAt,
   };
   if (tx.note) data.note = tx.note;
+  if (tx.fxSnapshot) data.fxSnapshot = tx.fxSnapshot; // RTDB undefined kabul etmez
   return data;
 }
 
 function fromFirebase(data: FirebaseTransaction, id: string): Transaction {
-  return {
+  const tx: Transaction = {
     id,
     type: data.type as Transaction['type'],
     assetType: data.assetType as Transaction['assetType'],
@@ -45,6 +50,9 @@ function fromFirebase(data: FirebaseTransaction, id: string): Transaction {
     note: data.note || undefined,
     createdAt: data.createdAt,
   };
+  // Eski kayıtlarda yok - damgasız gelir, backfill çözer.
+  if (data.fxSnapshot) tx.fxSnapshot = data.fxSnapshot;
+  return tx;
 }
 
 class FirebaseSyncService {

@@ -6,12 +6,17 @@ import { FilterBar } from '../components/transactions/FilterBar';
 import { TransactionCard } from '../components/transactions/TransactionCard';
 import { ConfirmModal } from '../components/common/ConfirmModal';
 import { TransactionForm } from '../components/form/TransactionForm';
-import { formatCurrency, formatNumber } from '../utils/formatters';
+import { formatNumber } from '../utils/formatters';
+import { getFxToday, toBase } from '../utils/currency';
+import { useCurrency } from '../hooks/useCurrency';
 import { List, X, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
 
 export function TransactionsPage() {
   const transactions = useVaultStore((s) => s.transactions);
   const deleteTransaction = useVaultStore((s) => s.deleteTransaction);
+  const liveRates = useVaultStore((s) => s.liveRates);
+  const { format, currency } = useCurrency();
+  const fxToday = useMemo(() => getFxToday(liveRates), [liveRates]);
 
   const [filter, setFilter] = useState<AssetType | null>(null);
   const [typeFilter, setTypeFilter] = useState<'all' | 'buy' | 'sell'>('all');
@@ -31,14 +36,17 @@ export function TransactionsPage() {
     if (filtered.length === 0) return null;
     const buys = filtered.filter((t) => t.type === 'buy' || !t.type);
     const sells = filtered.filter((t) => t.type === 'sell');
-    const totalBuyCost = buys.reduce((s, t) => s + t.totalCost, 0);
-    const totalSellRevenue = sells.reduce((s, t) => s + t.totalCost, 0);
+    // calculations.ts ile aynı kural: her işlem KENDİ tarihindeki kurla çevrilir.
+    // Toplayıp sonra bugünkü kurla çevirmek maliyeti çarpıtır.
+    const costInBase = (t: Transaction) => toBase(t.totalCost, t.fxSnapshot ?? fxToday, currency);
+    const totalBuyCost = buys.reduce((s, t) => s + costInBase(t), 0);
+    const totalSellRevenue = sells.reduce((s, t) => s + costInBase(t), 0);
     const totalBuyAmount = buys.reduce((s, t) => s + t.amount, 0);
     const totalSellAmount = sells.reduce((s, t) => s + t.amount, 0);
 
     const unit = filter ? ASSET_CONFIG[filter].unit : null;
     return { totalBuyCost, totalSellRevenue, totalBuyAmount, totalSellAmount, unit, buyCount: buys.length, sellCount: sells.length };
-  }, [filtered, filter]);
+  }, [filtered, filter, currency, fxToday]);
 
   const handleDelete = () => {
     if (deleteId) {
@@ -97,7 +105,7 @@ export function TransactionsPage() {
               </span>
             </div>
             <div className="text-right font-medium text-gray-800">
-              {formatCurrency(filterSummary.totalBuyCost)}
+              {format(filterSummary.totalBuyCost)}
             </div>
             {filterSummary.sellCount > 0 && (
               <>
@@ -109,7 +117,7 @@ export function TransactionsPage() {
                   </span>
                 </div>
                 <div className="text-right font-medium text-gray-800">
-                  {formatCurrency(filterSummary.totalSellRevenue)}
+                  {format(filterSummary.totalSellRevenue)}
                 </div>
               </>
             )}

@@ -1,9 +1,12 @@
-import type { Transaction, LiveRate, AssetSummary, AssetType } from '../types';
+import type { Transaction, LiveRate, AssetSummary, AssetType, BaseCurrency, FxSnapshot } from '../types';
+import { toBase } from './currency';
 
 export function computeAssetSummary(
   assetType: AssetType,
   transactions: Transaction[],
   liveRates: LiveRate[],
+  base: BaseCurrency = 'TRY',
+  fxToday: FxSnapshot | null = null,
 ): AssetSummary | null {
   const filtered = transactions.filter((t) => t.assetType === assetType);
   if (filtered.length === 0) return null;
@@ -15,8 +18,13 @@ export function computeAssetSummary(
   const totalSold = sells.reduce((sum, t) => sum + t.amount, 0);
   const totalAmount = totalBought - totalSold;
 
-  const totalCost = buys.reduce((sum, t) => sum + t.totalCost, 0);
-  const totalSellRevenue = sells.reduce((sum, t) => sum + t.totalCost, 0);
+  // Maliyet/hasılat her işlemin KENDİ tarihindeki kuruyla çevrilir. Toplayıp sonra
+  // bugünkü kurla çevirmek K/Z'yi bozar: ₺ enflasyonu geçmiş maliyeti olduğundan
+  // ucuz gösterir ve herkesi dâhi yatırımcı gibi kâra geçirir.
+  // Damga yoksa (eski kayıt/backfill başarısız) bugünkü kura düşeriz — yaklaşık; UI işaretler.
+  const costInBase = (t: Transaction) => toBase(t.totalCost, t.fxSnapshot ?? fxToday, base);
+  const totalCost = buys.reduce((sum, t) => sum + costInBase(t), 0);
+  const totalSellRevenue = sells.reduce((sum, t) => sum + costInBase(t), 0);
 
   const avgUnitPrice = totalBought > 0 ? totalCost / totalBought : 0;
   const realizedPL = totalSold > 0 ? totalSellRevenue - (avgUnitPrice * totalSold) : 0;
@@ -24,7 +32,8 @@ export function computeAssetSummary(
   const rate = liveRates.find((r) => r.assetType === assetType);
   // Elimizdeki varlığı ŞU AN bozdursak alacağımız fiyat = kuyumcunun/bankanın ALIŞ fiyatı (buyPrice).
   // Satış (sellPrice) müşterinin aldığı yüksek fiyattır; değerlemede kullanmak portföyü şişirir.
-  const currentUnitPrice = rate?.buyPrice ?? 0;
+  // Güncel değer bugünkü kurla çevrilir (maliyetin aksine).
+  const currentUnitPrice = toBase(rate?.buyPrice ?? 0, fxToday, base);
   const currentValue = totalAmount * currentUnitPrice;
   const remainingCost = totalAmount * avgUnitPrice;
   const unrealizedPL = currentValue - remainingCost;
@@ -53,10 +62,12 @@ export function computeAssetSummary(
 export function computeAllSummaries(
   transactions: Transaction[],
   liveRates: LiveRate[],
+  base: BaseCurrency = 'TRY',
+  fxToday: FxSnapshot | null = null,
 ): AssetSummary[] {
   const assetTypes = [...new Set(transactions.map((t) => t.assetType))];
   return assetTypes
-    .map((type) => computeAssetSummary(type, transactions, liveRates))
+    .map((type) => computeAssetSummary(type, transactions, liveRates, base, fxToday))
     .filter((s): s is AssetSummary => s !== null);
 }
 

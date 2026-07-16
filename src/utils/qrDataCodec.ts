@@ -3,7 +3,11 @@ import type { Transaction, TransactionType } from '../types';
 
 // QR Version 40, Error Correction Level M: max 3391 alphanumeric chars
 const QR_MAX_ALPHANUMERIC = 3391;
-const VERSION_PREFIX = '1:';
+
+// v2: kur damgası (f) eklendi. v1 QR'ları hâlâ okunur - damgasız gelirler, backfill çözer.
+// Ters yön çalışmaz: v1 sürümündeki bir cihaz v2 QR'ında throw eder. Kapalı testte kabul edildi.
+const VERSION_PREFIX = '2:';
+const SUPPORTED_PREFIXES = ['2:', '1:'];
 
 interface MinifiedTransaction {
   i: string;       // id
@@ -14,7 +18,10 @@ interface MinifiedTransaction {
   p: number;        // unitPrice
   n?: string;       // note
   c: string;        // createdAt
+  f?: [number, number]; // fxSnapshot [USD, EUR] - QR kapasitesi için 4 haneye yuvarlı
 }
+
+const round4 = (n: number) => Math.round(n * 1e4) / 1e4;
 
 const typeToNum = (t: TransactionType): 0 | 1 => t === 'buy' ? 0 : 1;
 const numToType = (n: 0 | 1): TransactionType => n === 0 ? 'buy' : 'sell';
@@ -30,11 +37,12 @@ function minify(tx: Transaction): MinifiedTransaction {
     c: tx.createdAt,
   };
   if (tx.note) m.n = tx.note;
+  if (tx.fxSnapshot) m.f = [round4(tx.fxSnapshot.USD), round4(tx.fxSnapshot.EUR)];
   return m;
 }
 
 function expand(m: MinifiedTransaction): Transaction {
-  return {
+  const tx: Transaction = {
     id: m.i,
     type: numToType(m.t),
     assetType: m.a as Transaction['assetType'],
@@ -45,6 +53,10 @@ function expand(m: MinifiedTransaction): Transaction {
     note: m.n || undefined,
     createdAt: m.c,
   };
+  if (m.f?.length === 2 && m.f[0] > 0 && m.f[1] > 0) {
+    tx.fxSnapshot = { USD: m.f[0], EUR: m.f[1] };
+  }
+  return tx;
 }
 
 export function encodeTransactions(transactions: Transaction[]): string {
@@ -55,10 +67,11 @@ export function encodeTransactions(transactions: Transaction[]): string {
 }
 
 export function decodeTransactions(data: string): Transaction[] {
-  if (!data.startsWith(VERSION_PREFIX)) {
+  const prefix = SUPPORTED_PREFIXES.find((p) => data.startsWith(p));
+  if (!prefix) {
     throw new Error('Desteklenmeyen QR veri formatı');
   }
-  const compressed = data.slice(VERSION_PREFIX.length);
+  const compressed = data.slice(prefix.length);
   const json = decompressFromEncodedURIComponent(compressed);
   if (!json) {
     throw new Error('QR verisi çözülemedi');

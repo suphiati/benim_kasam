@@ -1,9 +1,10 @@
 import { useVaultStore } from '../../store/vaultStore';
 import { ASSET_CONFIG, ASSET_TYPES } from '../../constants/assets';
-import { formatCurrency } from '../../utils/formatters';
+import { useCurrency } from '../../hooks/useCurrency';
 
 export function LiveRatesBar() {
   const liveRates = useVaultStore((s) => s.liveRates);
+  const { fromTry } = useCurrency();
 
   if (liveRates.length === 0) return null;
 
@@ -21,7 +22,8 @@ export function LiveRatesBar() {
               className="flex-shrink-0 bg-gray-50 rounded-xl px-3 py-2 min-w-[120px]"
             >
               <p className="text-xs text-gray-500 truncate">{config.label}</p>
-              <p className="text-sm font-bold text-gray-900">{formatCurrency(rate.sellPrice)}</p>
+              {/* Kur ham TRY gelir - bugünkü kurla taban paraya çevrilir. */}
+              <p className="text-sm font-bold text-gray-900">{fromTry(rate.sellPrice)}</p>
             </div>
           );
         })}

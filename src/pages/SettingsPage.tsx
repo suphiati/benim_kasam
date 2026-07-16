@@ -1,10 +1,11 @@
 import { useRef, useEffect } from 'react';
 import { useVaultStore } from '../store/vaultStore';
-import { Download, Upload, Trash2, Smartphone, Wifi, WifiOff, Unlink, Fingerprint } from 'lucide-react';
+import { Download, Upload, Trash2, Smartphone, Wifi, WifiOff, Unlink, Fingerprint, Coins } from 'lucide-react';
 import { useState } from 'react';
 import { ConfirmModal } from '../components/common/ConfirmModal';
 import { syncService } from '../services/firebaseSyncService';
 import { isNative, getBiometricStatus, isLockEnabled, setLockEnabled, authenticate } from '../services/biometric';
+import { BASE_CURRENCIES, CURRENCY_META } from '../utils/currency';
 
 interface SettingsPageProps {
   isConnected: boolean;
@@ -15,6 +16,8 @@ export function SettingsPage({ isConnected, onDisconnect }: SettingsPageProps) {
   const exportData = useVaultStore((s) => s.exportData);
   const importData = useVaultStore((s) => s.importData);
   const transactions = useVaultStore((s) => s.transactions);
+  const baseCurrency = useVaultStore((s) => s.baseCurrency);
+  const setBaseCurrency = useVaultStore((s) => s.setBaseCurrency);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
@@ -126,6 +129,32 @@ export function SettingsPage({ isConnected, onDisconnect }: SettingsPageProps) {
             </div>
           </div>
         )}
+
+        {/* Taban para birimi */}
+        <div className="bg-white border border-gray-200 rounded-xl p-4">
+          <div className="flex items-center gap-3 mb-3">
+            <Coins size={24} className="text-vault-600" />
+            <div className="flex-1">
+              <p className="font-medium text-gray-900">Para Birimi</p>
+              <p className="text-xs text-gray-500">Kasanızın raporlanacağı para birimi. İşlem girişi ₺ olarak kalır.</p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            {BASE_CURRENCIES.map((c) => (
+              <button
+                key={c}
+                type="button"
+                aria-pressed={baseCurrency === c}
+                onClick={() => setBaseCurrency(c)}
+                className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  baseCurrency === c ? 'bg-vault-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {CURRENCY_META[c].symbol} {c}
+              </button>
+            ))}
+          </div>
+        </div>
 
         {/* Biyometrik Kilit (yalnız native) */}
         {lockSupported && (

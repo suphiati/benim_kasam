@@ -16,6 +16,12 @@
             "unitPrice":  { ".validate": "newData.isNumber()" },
             "note":       { ".validate": "newData.isString()" },
             "createdAt":  { ".validate": "newData.isString()" },
+            "fxSnapshot": {
+              ".validate": "newData.hasChildren(['USD','EUR'])",
+              "USD":    { ".validate": "newData.isNumber() && newData.val() > 0" },
+              "EUR":    { ".validate": "newData.isNumber() && newData.val() > 0" },
+              "$other": { ".validate": false }
+            },
             "$other":     { ".validate": false }
           }
         },

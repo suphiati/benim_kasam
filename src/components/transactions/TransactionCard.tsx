@@ -1,7 +1,9 @@
 import { Trash2, Pencil, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
 import type { Transaction } from '../../types';
 import { ASSET_CONFIG } from '../../constants/assets';
-import { formatCurrency, formatNumber, formatDate } from '../../utils/formatters';
+import { formatNumber, formatDate } from '../../utils/formatters';
+import { useCurrency } from '../../hooks/useCurrency';
+import { isFxApprox } from '../../utils/currency';
 
 interface TransactionCardProps {
   transaction: Transaction;
@@ -10,8 +12,11 @@ interface TransactionCardProps {
 }
 
 export function TransactionCard({ transaction, onDelete, onEdit }: TransactionCardProps) {
+  const { fromTry, currency } = useCurrency();
   const config = ASSET_CONFIG[transaction.assetType];
   const isBuy = transaction.type === 'buy' || !transaction.type;
+  // Geçmiş işlem, işlemin KENDİ günündeki kurla gösterilir - bugünküyle değil.
+  const approx = isFxApprox(transaction, currency);
 
   return (
     <div className={`bg-white border rounded-xl p-3 shadow-sm ${isBuy ? 'border-green-100' : 'border-red-100'}`}>
@@ -64,11 +69,11 @@ export function TransactionCard({ transaction, onDelete, onEdit }: TransactionCa
         </div>
         <div>
           <p className="text-gray-400">{isBuy ? 'Alış' : 'Satış'} Fiyatı</p>
-          <p className="font-medium">{formatCurrency(transaction.unitPrice)}</p>
+          <p className="font-medium">{fromTry(transaction.unitPrice, transaction.fxSnapshot)}</p>
         </div>
         <div className="text-right">
-          <p className="text-gray-400">Toplam</p>
-          <p className={`font-bold ${isBuy ? 'text-gray-900' : 'text-red-600'}`}>{formatCurrency(transaction.totalCost)}</p>
+          <p className="text-gray-400">Toplam{approx && <span title="Kur damgası yok, bugünkü kurla yaklaşık gösteriliyor"> ~</span>}</p>
+          <p className={`font-bold ${isBuy ? 'text-gray-900' : 'text-red-600'}`}>{fromTry(transaction.totalCost, transaction.fxSnapshot)}</p>
         </div>
       </div>
       {transaction.note && (

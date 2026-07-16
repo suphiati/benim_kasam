@@ -17,10 +17,14 @@ const DB_VERSION = 1;
 
 function getDB() {
   return openDB<BenimKasamDB>(DB_NAME, DB_VERSION, {
-    upgrade(db) {
-      const store = db.createObjectStore('transactions', { keyPath: 'id' });
-      store.createIndex('by-asset', 'assetType');
-      store.createIndex('by-date', 'date');
+    // oldVersion'a göre koşullu: DB_VERSION ileride artarsa bu callback mevcut
+    // kullanıcılarda tekrar çalışır; guard olmadan createObjectStore ConstraintError atar.
+    upgrade(db, oldVersion) {
+      if (oldVersion < 1) {
+        const store = db.createObjectStore('transactions', { keyPath: 'id' });
+        store.createIndex('by-asset', 'assetType');
+        store.createIndex('by-date', 'date');
+      }
     },
   });
 }

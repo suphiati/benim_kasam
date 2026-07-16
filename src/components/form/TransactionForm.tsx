@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { AssetType, Transaction, TransactionType } from '../../types';
 import { useVaultStore } from '../../store/vaultStore';
 import { AssetTypePicker } from './AssetTypePicker';
-import { todayISO } from '../../utils/formatters';
+import { formatCurrency, todayISO } from '../../utils/formatters';
+import { getFxToday, toBase } from '../../utils/currency';
 import { Save, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
 
 interface TransactionFormProps {
@@ -14,6 +15,8 @@ export function TransactionForm({ editingTransaction, onSaved }: TransactionForm
   const addTransaction = useVaultStore((s) => s.addTransaction);
   const editTransaction = useVaultStore((s) => s.editTransaction);
   const liveRates = useVaultStore((s) => s.liveRates);
+  const baseCurrency = useVaultStore((s) => s.baseCurrency);
+  const fxToday = useMemo(() => getFxToday(liveRates), [liveRates]);
 
   const [txType, setTxType] = useState<TransactionType>(editingTransaction?.type ?? 'buy');
   const [assetType, setAssetType] = useState<AssetType | null>(editingTransaction?.assetType ?? null);
@@ -22,6 +25,8 @@ export function TransactionForm({ editingTransaction, onSaved }: TransactionForm
   const [unitPrice, setUnitPrice] = useState(editingTransaction?.unitPrice.toString() ?? '');
   const [note, setNote] = useState(editingTransaction?.note ?? '');
   const [saving, setSaving] = useState(false);
+
+  const previewTotal = (parseFloat(amount || '0') || 0) * (parseFloat(unitPrice || '0') || 0);
 
   useEffect(() => {
     if (assetType && !editingTransaction) {
@@ -150,8 +155,15 @@ export function TransactionForm({ editingTransaction, onSaved }: TransactionForm
         <div className={`rounded-lg p-3 text-sm ${txType === 'buy' ? 'bg-green-50' : 'bg-red-50'}`}>
           <span className="text-gray-500">Toplam {txType === 'buy' ? 'Maliyet' : 'Gelir'}: </span>
           <span className={`font-bold ${txType === 'buy' ? 'text-green-700' : 'text-red-700'}`}>
-            {(parseFloat(amount || '0') * parseFloat(unitPrice || '0')).toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}
+            {/* Giriş her zaman TRY: fiyatlar Kapalıçarşı'dan ₺ geliyor ve işlem ₺ ile yapılıyor.
+                Taban para yalnızca raporlama katmanı - burada bilinçli olarak TRY sabit. */}
+            {formatCurrency(previewTotal, 'TRY')}
           </span>
+          {baseCurrency !== 'TRY' && (
+            <span className="text-gray-400 ml-1">
+              ≈ {formatCurrency(toBase(previewTotal, fxToday, baseCurrency), baseCurrency)}
+            </span>
+          )}
         </div>
       )}
 

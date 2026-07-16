@@ -1,5 +1,6 @@
 import { TrendingUp, TrendingDown, Wallet, PiggyBank, BarChart3 } from 'lucide-react';
-import { formatCurrency, formatPercent } from '../../utils/formatters';
+import { formatPercent } from '../../utils/formatters';
+import { useCurrency } from '../../hooks/useCurrency';
 
 interface TotalVaultCardProps {
   totalValue: number;
@@ -11,6 +12,7 @@ interface TotalVaultCardProps {
 }
 
 export function TotalVaultCard({ totalValue, totalCost, totalRealizedPL, totalUnrealizedPL, totalPL, totalPLPercent }: TotalVaultCardProps) {
+  const { format } = useCurrency();
   const isProfit = totalPL >= 0;
 
   return (
@@ -19,14 +21,14 @@ export function TotalVaultCard({ totalValue, totalCost, totalRealizedPL, totalUn
         <Wallet size={16} className="text-gold-400" />
         <p className="text-vault-300 text-sm">Toplam Kasa Değeri</p>
       </div>
-      <p className="text-3xl font-bold tracking-tight">{formatCurrency(totalValue)}</p>
+      <p className="text-3xl font-bold tracking-tight">{format(totalValue)}</p>
 
       <div className="grid grid-cols-2 gap-3 mt-4 pt-3 border-t border-vault-700">
         <div className="flex items-start gap-2">
           <PiggyBank size={14} className="text-vault-400 mt-0.5" />
           <div>
             <p className="text-vault-400 text-[10px] uppercase tracking-wider">Toplam Maliyet</p>
-            <p className="text-sm font-medium">{formatCurrency(totalCost)}</p>
+            <p className="text-sm font-medium">{format(totalCost)}</p>
           </div>
         </div>
         <div className="flex items-start gap-2 justify-end text-right">
@@ -35,7 +37,7 @@ export function TotalVaultCard({ totalValue, totalCost, totalRealizedPL, totalUn
             <div className="flex items-center gap-1 justify-end">
               {isProfit ? <TrendingUp size={12} className="text-green-400" /> : <TrendingDown size={12} className="text-red-400" />}
               <span className={`text-sm font-bold ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
-                {formatCurrency(totalPL)}
+                {format(totalPL)}
               </span>
             </div>
             <span className={`text-[10px] ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
@@ -51,13 +53,13 @@ export function TotalVaultCard({ totalValue, totalCost, totalRealizedPL, totalUn
           <div>
             <p className="text-vault-400">Gerçekleşen K/Z</p>
             <p className={`font-medium ${totalRealizedPL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-              {formatCurrency(totalRealizedPL)}
+              {format(totalRealizedPL)}
             </p>
           </div>
           <div className="text-right">
             <p className="text-vault-400">Gerçekleşmemiş K/Z</p>
             <p className={`font-medium ${totalUnrealizedPL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-              {formatCurrency(totalUnrealizedPL)}
+              {format(totalUnrealizedPL)}
             </p>
           </div>
         </div>
