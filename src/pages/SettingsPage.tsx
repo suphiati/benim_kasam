@@ -21,7 +21,10 @@ export function SettingsPage({ isConnected, onDisconnect }: SettingsPageProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
-  const [importStatus, setImportStatus] = useState<string | null>(null);
+  // Durum, metnin İÇERİĞİNDEN değil kendi alanından okunur. Eskiden stil
+  // importStatus.includes('Hata') ile seçiliyordu; metin çevrilince ('Error: ...')
+  // kontrol false döner ve HATA mesajı yeşil "başarılı" kutusunda görünürdü.
+  const [importStatus, setImportStatus] = useState<{ ok: boolean; message: string } | null>(null);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
 
   // Biyometrik kilit (yalnız native)
@@ -77,10 +80,10 @@ export function SettingsPage({ isConnected, onDisconnect }: SettingsPageProps) {
     try {
       const text = await file.text();
       await importData(text);
-      setImportStatus(`Başarıyla içe aktarıldı!`);
+      setImportStatus({ ok: true, message: 'Başarıyla içe aktarıldı!' });
       setTimeout(() => setImportStatus(null), 3000);
     } catch {
-      setImportStatus('Hata: Dosya okunamadı veya geçersiz format.');
+      setImportStatus({ ok: false, message: 'Hata: Dosya okunamadı veya geçersiz format.' });
       setTimeout(() => setImportStatus(null), 3000);
     }
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -271,8 +274,8 @@ export function SettingsPage({ isConnected, onDisconnect }: SettingsPageProps) {
         </div>
 
         {importStatus && (
-          <div className={`rounded-lg p-3 text-sm ${importStatus.includes('Hata') ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
-            {importStatus}
+          <div className={`rounded-lg p-3 text-sm ${importStatus.ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+            {importStatus.message}
           </div>
         )}
 

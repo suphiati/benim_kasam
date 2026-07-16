@@ -39,7 +39,6 @@ interface VaultState {
   backfillFxSnapshots: () => Promise<void>;
   exportData: () => string;
   importData: (json: string) => Promise<void>;
-  mergeTransactions: (incoming: Transaction[]) => Promise<{ added: number; skipped: number }>;
   applyRemoteAdd: (tx: Transaction) => Promise<void>;
   applyRemoteUpdate: (tx: Transaction) => Promise<void>;
   applyRemoteDelete: (id: string) => Promise<void>;
@@ -185,24 +184,6 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     const all = await db.getAllTransactions();
     set({ transactions: all });
     get().backfillFxSnapshots(); // v1 export'unda fxSnapshot yok
-  },
-
-  mergeTransactions: async (incoming) => {
-    const existingIds = new Set(get().transactions.map((t) => t.id));
-    let added = 0;
-    let skipped = 0;
-    for (const tx of incoming) {
-      if (existingIds.has(tx.id)) {
-        skipped++;
-      } else {
-        await db.addTransaction(tx);
-        added++;
-      }
-    }
-    const all = await db.getAllTransactions();
-    set({ transactions: all });
-    if (added > 0) get().backfillFxSnapshots(); // eski sürüm QR'ında damga yok
-    return { added, skipped };
   },
 
   // Remote actions - no Firebase push (prevents loop)
