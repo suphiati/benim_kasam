@@ -42,6 +42,21 @@ function safeJsonParse(text: string): Record<string, unknown> {
   }
 }
 
+/**
+ * Truncgil ölçek düzeltmesi. JPY'yi 1/100 ölçekte kote ediyor:
+ * Buying 0.002899 diyor ama 1 yen ~0.29 TL. ECB (Frankfurter) ile çapraz
+ * doğrulandı: beklenen/gelen = 100.07. Diğer TÜM para birimleri 1.00 çıktı,
+ * yani sorun yalnızca JPY'de.
+ *
+ * Düzeltme KAYNAK SINIRINDA yapılır (extractTruncgil), aşağısı değil: JPY,
+ * Truncgil çökerse ExchangeRate yedeğinden ZATEN doğru ölçekte geliyor.
+ * Aşağıda toptan çarpsaydık o durumda 100 kat BÜYÜK olurdu.
+ *
+ * NOT: src/services/apiMappers.ts'te aynı tablo var (doğrudan-Truncgil yolu için).
+ * Bu repoda api/ ve src/ sabitleri bilinçli ayrı - ikisi birlikte güncellenmeli.
+ */
+const TRUNCGIL_SCALE: Record<string, number> = { JPY: 100 };
+
 // Ortak iç anahtar listesi (döviz + altın + gümüş)
 const CURRENCY_KEYS = ['USD', 'EUR', 'GBP', 'CHF', 'CAD', 'AUD', 'JPY', 'SAR', 'AED', 'RUB', 'CNY', 'NOK', 'SEK', 'KWD', 'BGN', 'GEL'];
 const METAL_KEYS = ['GRA', 'CEYREKALTIN', 'YARIMALTIN', 'TAMALTIN', 'CUMHURIYETALTINI', 'ATAALTIN', 'GUMUS', '14AYARALTIN', 'YIA'];
@@ -64,8 +79,9 @@ function extractTruncgil(data: Record<string, unknown>): Record<string, RateItem
   for (const key of [...CURRENCY_KEYS, ...METAL_KEYS]) {
     const item = data[key] as Record<string, string | number> | undefined;
     if (!item) continue;
-    const buy = parseNum(item['Buying'] ?? '0');
-    const sell = parseNum(item['Selling'] ?? '0');
+    const scale = TRUNCGIL_SCALE[key] ?? 1;
+    const buy = parseNum(item['Buying'] ?? '0') * scale;
+    const sell = parseNum(item['Selling'] ?? '0') * scale;
     if (validRate(buy, sell)) {
       rates[key] = { Buying: buy, Selling: sell, Type: (item['Type'] as string) || 'Unknown' };
     }

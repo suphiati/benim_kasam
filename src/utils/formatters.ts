@@ -11,15 +11,15 @@ const numberFormatters = new Map<Locale, Intl.NumberFormat>();
 const percentFormatters = new Map<Locale, Intl.NumberFormat>();
 const dateFormatters = new Map<Locale, Intl.DateTimeFormat>();
 
-function getCurrencyFormatter(locale: Locale, currency: BaseCurrency): Intl.NumberFormat {
-  const key = `${locale}:${currency}`;
+function getCurrencyFormatter(locale: Locale, currency: BaseCurrency, digits: number): Intl.NumberFormat {
+  const key = `${locale}:${currency}:${digits}`;
   let fmt = currencyFormatters.get(key);
   if (!fmt) {
     fmt = new Intl.NumberFormat(locale, {
       style: 'currency',
       currency,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
     });
     currencyFormatters.set(key, fmt);
   }
@@ -58,12 +58,19 @@ function getDateFormatter(locale: Locale): Intl.DateTimeFormat {
   return fmt;
 }
 
+/**
+ * Çok küçük birim fiyatlar 2 hanede sıfıra yuvarlanır ve fiyat yokmuş gibi görünür:
+ * 1 Japon Yeni taban USD'de ~$0,0062 -> "$0,01", taban EUR'da daha da beter.
+ * 0,1'in altında 4 haneye çıkıyoruz. Toplamlar/portföy değerleri büyük olduğu için
+ * onlar 2 hanede kalır - tutarsızlık oluşmaz.
+ */
 export function formatCurrency(
   value: number,
   currency: BaseCurrency = 'TRY',
   locale: Locale = DEFAULT_LOCALE,
 ): string {
-  return getCurrencyFormatter(locale, currency).format(value);
+  const digits = value !== 0 && Math.abs(value) < 0.1 ? 4 : 2;
+  return getCurrencyFormatter(locale, currency, digits).format(value);
 }
 
 export function formatNumber(value: number, locale: Locale = DEFAULT_LOCALE): string {
