@@ -40,6 +40,7 @@ export const en: Record<TKey, string> = {
   'vault.myAssets_other': 'My Assets ({n} items)',
   'vault.liveRates': 'Live Rates',
   'vault.totalValue': 'Total Vault Value',
+  'vault.currencyLabel': 'Vault currency',
   'vault.totalCost': 'Total Cost',
   'vault.totalPL': 'Total P/L',
   'vault.realizedPL': 'Realized P/L',
@@ -130,6 +131,7 @@ export const en: Record<TKey, string> = {
   'form.group.currencies': 'Currencies',
   'form.group.gold': 'Gold',
   'form.group.commodity': 'Precious Metals',
+  'form.group.frequent': 'Frequently Used',
 
   // ---- Ayarlar ----
   'settings.title': 'Settings',

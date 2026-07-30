@@ -1,11 +1,15 @@
+import { useMemo } from 'react';
 import type { AssetType } from '../../types';
 import { ASSET_CONFIG, ASSET_TYPES, assetLabelKey } from '../../constants/assets';
 import { useT } from '../../hooks/useT';
+import { useVaultStore } from '../../store/vaultStore';
 
 interface AssetTypePickerProps {
   selected: AssetType | null;
   onSelect: (type: AssetType) => void;
 }
+
+const MAX_FREQUENT = 8; // 2 satır (4 sütun)
 
 const ICON_MAP: Record<string, string> = {
   '$': '$', '€': '€', '£': '£', '¥': '¥', '₽': '₽',
@@ -22,9 +26,24 @@ function getIcon(config: { unit: string; category: string }): string {
 
 export function AssetTypePicker({ selected, onSelect }: AssetTypePickerProps) {
   const { t } = useT();
+  const transactions = useVaultStore((s) => s.transactions);
   const currencies = ASSET_TYPES.filter((type) => ASSET_CONFIG[type].category === 'currency');
   const golds = ASSET_TYPES.filter((type) => ASSET_CONFIG[type].category === 'gold');
   const commodities = ASSET_TYPES.filter((type) => ASSET_CONFIG[type].category === 'commodity');
+
+  // Kullanıcının işlem yaptığı varlıklar, sıklığa göre. Dönen kullanıcı kendi
+  // 3-4 varlığını en üstte bulur; 25'lik listeyi taramak zorunda kalmaz.
+  // İşlem yoksa (yeni kullanıcı) boş kalır ve sadece tam liste gösterilir.
+  const frequent = useMemo(() => {
+    const counts = new Map<AssetType, number>();
+    for (const tx of transactions) {
+      counts.set(tx.assetType, (counts.get(tx.assetType) ?? 0) + 1);
+    }
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, MAX_FREQUENT)
+      .map(([type]) => type);
+  }, [transactions]);
 
   const renderGroup = (label: string, types: AssetType[]) => (
     <div>
@@ -60,6 +79,7 @@ export function AssetTypePicker({ selected, onSelect }: AssetTypePickerProps) {
 
   return (
     <div className="space-y-3">
+      {frequent.length > 0 && renderGroup(t('form.group.frequent'), frequent)}
       {renderGroup(t('form.group.currencies'), currencies)}
       {renderGroup(t('form.group.gold'), golds)}
       {commodities.length > 0 && renderGroup(t('form.group.commodity'), commodities)}

@@ -49,6 +49,7 @@ export const tr = {
   'vault.myAssets_other': 'Varlıklarım ({n} kalem)',
   'vault.liveRates': 'Güncel Kurlar',
   'vault.totalValue': 'Toplam Kasa Değeri',
+  'vault.currencyLabel': 'Kasa para birimi',
   'vault.totalCost': 'Toplam Maliyet',
   'vault.totalPL': 'Toplam K/Z',
   'vault.realizedPL': 'Gerçekleşen K/Z',
@@ -142,6 +143,7 @@ export const tr = {
   'form.group.currencies': 'Dövizler',
   'form.group.gold': 'Altın',
   'form.group.commodity': 'Değerli Maden',
+  'form.group.frequent': 'Sık Kullanılanlar',
 
   // ---- Ayarlar ----
   'settings.title': 'Ayarlar',
