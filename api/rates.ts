@@ -179,7 +179,18 @@ async function fetchExchangeRateAPI(): Promise<Record<string, RateItem>> {
 // kontrol) -> ExchangeRate (döviz son çare). Sabit katsayılı "formül"
 // kaldırıldı: iki gerçek kaynak her ürünün fiyatını doğrudan veriyor.
 // ============================================================
-export default async function handler(_req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // CORS: native uygulama (Capacitor origin https://localhost) bu proxy'yi CROSS-ORIGIN
+  // çağırıyor. Başlık olmadan WebView "Failed to fetch" ile bloke ediyordu ve native
+  // hiç kur alamıyordu. Veri herkese açık (kimlik/sır yok) - '*' güvenli.
+  // PWA aynı origin'den çağırdığı için bundan etkilenmez.
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  if (req.method === 'OPTIONS') {
+    res.status(204).end();
+    return;
+  }
+
   const sources: string[] = [];
   const failures: string[] = [];
   const divergences: string[] = [];
