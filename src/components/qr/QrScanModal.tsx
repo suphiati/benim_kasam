@@ -23,8 +23,18 @@ export function QrScanModal({ onClose, onConnect }: QrScanModalProps) {
   const processedRef = useRef(false);
 
   useEffect(() => {
-    const readerId = 'qr-reader';
-    const scanner = new Html5Qrcode(readerId);
+    const scanner = new Html5Qrcode('qr-reader');
+    let stopped = false;
+
+    // Tarayıcıyı güvenle durdur + temizle. clear() html5-qrcode'un #qr-reader'a
+    // enjekte ettiği <video>/<canvas> düğümlerini KENDİSİ kaldırır; böylece React
+    // unmount ederken div'i boş görür ve removeChild uyuşmazlığı (beyaz ekran) olmaz.
+    const safeStop = async () => {
+      if (stopped) return;
+      stopped = true;
+      try { await scanner.stop(); } catch { /* zaten durmuş */ }
+      try { scanner.clear(); } catch { /* yok say */ }
+    };
 
     scanner
       .start(
@@ -33,12 +43,7 @@ export function QrScanModal({ onClose, onConnect }: QrScanModalProps) {
         async (decodedText) => {
           if (processedRef.current) return;
           processedRef.current = true;
-
-          try {
-            await scanner.stop();
-          } catch {
-            // already stopped
-          }
+          await safeStop();
 
           try {
             // Yeni format: {"v":1,"vault":"uuid"}
@@ -69,37 +74,36 @@ export function QrScanModal({ onClose, onConnect }: QrScanModalProps) {
         });
       });
 
-    return () => {
-      scanner.stop().catch(() => {});
-    };
+    return () => { safeStop(); };
   }, [onConnect]);
 
   return (
     <div className="fixed inset-0 bg-black/90 flex flex-col items-center justify-center z-[100]">
-      <div className="absolute top-4 right-4">
+      <div className="absolute top-4 right-4 z-20">
         <button onClick={onClose} className="p-2 text-white/80 hover:text-white">
           <X size={24} />
         </button>
       </div>
 
-      {state.status === 'scanning' && (
-        <>
-          <div className="flex items-center gap-2 text-white mb-4">
-            <Camera size={20} />
-            <p className="text-sm font-medium">{t('qr.showToCamera')}</p>
-          </div>
-          <div
-            id="qr-reader"
-            className="w-[320px] h-[320px] overflow-hidden rounded-2xl"
-          />
-          <button
-            onClick={onClose}
-            className="mt-6 px-6 py-2.5 border border-white/30 text-white rounded-xl text-sm font-medium hover:bg-white/10 transition-colors"
-          >
-            {t('common.cancel')}
-          </button>
-        </>
-      )}
+      {/* #qr-reader HER ZAMAN mount'ta kalır; state değişince React ile kaldırılmaz
+          (html5-qrcode DOM'u ile unmount yarışı beyaz ekrana yol açıyordu). Tarama
+          dışında CSS ile gizlenir, ilgili durum katmanı üste biner. */}
+      <div className={state.status === 'scanning' ? 'flex flex-col items-center' : 'hidden'}>
+        <div className="flex items-center gap-2 text-white mb-4">
+          <Camera size={20} />
+          <p className="text-sm font-medium">{t('qr.showToCamera')}</p>
+        </div>
+        <div
+          id="qr-reader"
+          className="w-[320px] h-[320px] overflow-hidden rounded-2xl"
+        />
+        <button
+          onClick={onClose}
+          className="mt-6 px-6 py-2.5 border border-white/30 text-white rounded-xl text-sm font-medium hover:bg-white/10 transition-colors"
+        >
+          {t('common.cancel')}
+        </button>
+      </div>
 
       {state.status === 'connecting' && (
         <div className="bg-white rounded-2xl p-6 mx-4 max-w-sm w-full text-center">
