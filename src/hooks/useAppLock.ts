@@ -3,12 +3,19 @@ import { App } from '@capacitor/app';
 import { isNative, isLockEnabled, getBiometricStatus, authenticate } from '../services/biometric';
 
 /**
- * Uygulama kilidi: native'de açılışta ve arka plandan dönünce biyometrik/PIN
- * doğrulaması ister. Web/PWA'da devre dışı. Native'de state baştan `true`
- * başlar ki kasa bir an bile görünmesin (flash yok).
+ * Uygulama kilidi: native'de YALNIZCA açılışta (cold start) biyometrik/PIN ister.
+ *
+ * Arka plandan dönüşte tekrar SORMAZ — eskiden her dönüşte (bildirime bakmak, 2 sn
+ * başka uygulamaya geçmek) parmak izi istiyordu ve itici oluyordu. Bunun yerine arka
+ * plandayken bir gizlilik ÖRTÜSÜ gösterilir (kasa recent-apps önizlemesinde görünmesin);
+ * dönüşte örtü otomatik kalkar, biyometri gerekmez.
+ *
+ * Web/PWA'da tamamen devre dışı. Native'de `locked` baştan true ki kasa bir an bile
+ * görünmesin (flash yok).
  */
 export function useAppLock() {
   const [locked, setLocked] = useState(() => isNative());
+  const [covered, setCovered] = useState(false);
   const [ready, setReady] = useState(false);
   const shouldLockRef = useRef(false);
 
@@ -31,12 +38,14 @@ export function useAppLock() {
     return () => { mounted = false; };
   }, []);
 
-  // Arka plana geçince yeniden kilitle
+  // Arka plana geçince gizlilik örtüsü göster; öne dönünce kaldır. Biyometri İSTEMEZ.
+  // (Kilit yalnızca açılışta; burada setLocked yok.)
   useEffect(() => {
     if (!isNative()) return;
     let handle: { remove: () => void } | undefined;
     App.addListener('appStateChange', ({ isActive }) => {
-      if (!isActive && shouldLockRef.current) setLocked(true);
+      if (!shouldLockRef.current) return;
+      setCovered(!isActive);
     }).then((h) => { handle = h; });
     return () => { handle?.remove(); };
   }, []);
@@ -47,5 +56,5 @@ export function useAppLock() {
     return ok;
   }, []);
 
-  return { locked, ready, unlock };
+  return { locked, covered, ready, unlock };
 }

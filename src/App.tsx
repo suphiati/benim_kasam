@@ -10,6 +10,7 @@ import { AddTransactionPage } from './pages/AddTransactionPage';
 import { TransactionsPage } from './pages/TransactionsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { BiometricLock } from './components/common/BiometricLock';
+import { PrivacyCover } from './components/common/PrivacyCover';
 import { useT } from './hooks/useT';
 
 export default function App() {
@@ -17,7 +18,7 @@ export default function App() {
   const init = useVaultStore((s) => s.init);
   const isInitialized = useVaultStore((s) => s.isInitialized);
   const { isConnected, connect, disconnect } = useFirebaseSync();
-  const { locked, unlock } = useAppLock();
+  const { locked, covered, unlock } = useAppLock();
   const { t } = useT();
 
   useEffect(() => {
@@ -48,8 +49,11 @@ export default function App() {
           <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
         </>
       )}
-      {/* Kilitliyse tüm ekranı kapatan opak katman (kasa görünmez) */}
+      {/* Açılış kilidi: tüm ekranı kapatan opak katman + biyometri (kasa görünmez) */}
       {locked && <BiometricLock onUnlock={unlock} />}
+      {/* Arka plan gizlilik örtüsü: kilit yokken, uygulama arka plandayken kasayı gizler.
+          Biyometri istemez; öne dönünce kalkar. */}
+      {!locked && covered && <PrivacyCover />}
     </>
   );
 }
