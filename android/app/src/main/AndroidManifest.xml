@@ -34,4 +34,13 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <uses-permission android:name="android.permission.USE_FINGERPRINT" />
+
+    <!-- QR okuma (cihaz eşleştirme) için WebView kamera erişimi.
+         Capacitor'ın WebChromeClient'i getUserMedia çağrısında bu izni çalışma
+         anında ister; izin manifest'te olmadan istem hiç görünmüyordu. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- required=false: kamera yalnızca opsiyonel QR senkron için; kamerasız
+         cihazlar (bazı tabletler/Chrome OS) yine de uygulamayı kurabilsin. -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
 </manifest>
