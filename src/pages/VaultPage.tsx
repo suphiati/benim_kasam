@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAssetSummaries } from '../hooks/useAssetSummary';
 import { useVaultStore } from '../store/vaultStore';
 import { TotalVaultCard } from '../components/vault/TotalVaultCard';
+import { MarketClosedNotice } from '../components/vault/MarketClosedNotice';
 import { LiveRatesBar } from '../components/vault/LiveRatesBar';
 import { AssetSummaryCard } from '../components/vault/AssetSummaryCard';
 import { QrGenerateModal } from '../components/qr/QrGenerateModal';
@@ -70,6 +71,7 @@ export function VaultPage({ isConnected, onConnect }: VaultPageProps) {
         totalPL={totals.totalPL}
         totalPLPercent={totals.totalPLPercent}
       />
+      <MarketClosedNotice />
       <div className="flex gap-3 px-4 mt-3">
         <button
           onClick={() => setShowQrGenerate(true)}

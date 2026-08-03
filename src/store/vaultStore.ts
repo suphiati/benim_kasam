@@ -55,6 +55,7 @@ interface VaultState {
   liveRates: LiveRate[];
   lastRateUpdate: string | null;   // istemcinin son fetch (kontrol) zamanı
   marketTimestamp: string | null;  // piyasa verisinin gerçek güncellenme zamanı (Truncgil Update_Date)
+  marketClosed: boolean;           // true => değerler canlı değil, kapanış öncesi son veriye göre
   rateSources: string[];
   isLoadingRates: boolean;
   isInitialized: boolean;
@@ -81,6 +82,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
   liveRates: [],
   lastRateUpdate: null,
   marketTimestamp: null,
+  marketClosed: false,
   rateSources: [],
   isLoadingRates: false,
   isInitialized: false,
@@ -150,7 +152,10 @@ export const useVaultStore = create<VaultState>((set, get) => ({
       liveRates: hasRates ? result.rates : get().liveRates,
       lastRateUpdate: hasRates ? new Date().toISOString() : get().lastRateUpdate,
       marketTimestamp: hasRates ? (result.meta.timestamp || get().marketTimestamp) : get().marketTimestamp,
-      rateSources: result.meta.sources,
+      marketClosed: hasRates ? result.marketClosed : get().marketClosed,
+      // Kaynak etiketini de diğer alanlarla birlikte dondur: 0 kayıtlık yenilemede
+      // ['none'] yazsaydık gösterilen (eski) kurların üstünde "(none)" çelişkisi çıkardı.
+      rateSources: hasRates ? result.meta.sources : get().rateSources,
       isLoadingRates: false,
     });
   },

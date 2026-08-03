@@ -25,7 +25,7 @@ export const tr = {
   'header.retry': 'Tekrar dene',
   // {timeAgo} Intl.RelativeTimeFormat'tan hazır gelir - burada birleştirme yok.
   'header.market': 'Piyasa: {timeAgo}',
-  'header.marketStale': 'Piyasa: {timeAgo} (kapalı olabilir)',
+  'header.marketStale': 'Piyasa: {timeAgo} (piyasalar kapalı)',
 
   // ---- Ortak ----
   'common.loading': 'Yükleniyor...',
@@ -48,6 +48,9 @@ export const tr = {
   'vault.myAssets_one': 'Varlıklarım ({n} kalem)',
   'vault.myAssets_other': 'Varlıklarım ({n} kalem)',
   'vault.liveRates': 'Güncel Kurlar',
+  // Piyasa kapalıyken (hafta sonu / kapanış) canlı fiyat gelmez; değerler kapanış
+  // öncesi son TAM veriye göredir. Bu uyarı yalnızca o durumda gösterilir.
+  'vault.marketClosedNotice': 'Piyasalar kapalı. Değerler, piyasa kapanmadan önceki son verilere göredir.',
   'vault.totalValue': 'Toplam Kasa Değeri',
   'vault.currencyLabel': 'Kasa para birimi',
   'vault.totalCost': 'Toplam Maliyet',

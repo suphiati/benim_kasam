@@ -4,9 +4,13 @@ import { useState, useEffect } from 'react';
 import { useT } from '../../hooks/useT';
 import type { Locale } from '../../utils/formatters';
 
-// Truncgil "2026-07-13 19:59:01" (yerel saat) ve ISO formatını tolere eder
+// Truncgil "2026-07-13 19:59:01" OFSSİZ İstanbul saatidir (UTC+3, yaz saati yok). Ofis
+// eklemezsek new Date() cihaz yerel saatinde yorumlar; İstanbul dışı cihazlarda "X dk önce"
+// saatlerce kayar. rateService'teki marketAgeMs ile aynı mantık - ikisi birlikte güncellenmeli.
 function getAgeMinutes(dateStr: string): number {
-  const t = new Date(dateStr.includes('T') ? dateStr : dateStr.replace(' ', 'T')).getTime();
+  const iso = dateStr.includes('T') ? dateStr : dateStr.replace(' ', 'T');
+  const hasTz = /([Zz]|[+-]\d{2}:?\d{2})$/.test(iso);
+  const t = new Date(hasTz ? iso : `${iso}+03:00`).getTime();
   if (Number.isNaN(t)) return 0;
   return Math.max(0, Math.floor((Date.now() - t) / 60000));
 }
@@ -37,15 +41,15 @@ function formatTimeAgo(dateStr: string, locale: Locale): string {
   return rtf.format(-Math.floor(hours / 24), 'day');
 }
 
-// Piyasa verisi 45 dk'dan eskiyse muhtemelen piyasa kapalı / veri donmuş
-const STALE_AFTER_MIN = 45;
-
 export function Header() {
   const refreshRates = useVaultStore((s) => s.refreshRates);
   const isLoadingRates = useVaultStore((s) => s.isLoadingRates);
   const marketTimestamp = useVaultStore((s) => s.marketTimestamp);
   const liveRates = useVaultStore((s) => s.liveRates);
   const rateSources = useVaultStore((s) => s.rateSources);
+  // Piyasa kapalı / veri canlı değil: rateService merkezî olarak hesaplar
+  // (gerçek kaynak yok VEYA veri >45 dk donmuş). Header yalnızca yansıtır.
+  const marketClosed = useVaultStore((s) => s.marketClosed);
   const { t, locale } = useT();
   const [, setTick] = useState(0);
 
@@ -56,7 +60,6 @@ export function Header() {
   }, []);
 
   const timeAgo = marketTimestamp ? formatTimeAgo(marketTimestamp, locale) : null;
-  const isStale = marketTimestamp ? getAgeMinutes(marketTimestamp) >= STALE_AFTER_MIN : false;
   const hasRates = liveRates.length > 0;
 
   return (
@@ -78,13 +81,13 @@ export function Header() {
       </div>
       {timeAgo && (
         <div className="flex items-center gap-1 mt-1">
-          <Clock size={10} className={isStale ? 'text-amber-400' : 'text-vault-400'} />
-          <span className={`text-[10px] ${!hasRates ? 'text-red-400' : isStale ? 'text-amber-400' : 'text-vault-300'}`}>
+          <Clock size={10} className={marketClosed ? 'text-amber-400' : 'text-vault-400'} />
+          <span className={`text-[10px] ${!hasRates ? 'text-red-400' : marketClosed ? 'text-amber-400' : 'text-vault-300'}`}>
             {/* timeAgo hazır metin olarak DEĞİŞKEN geçilir; string birleştirmede
                 "Piyasa:" öneki İngilizceye taşınamazdı. */}
             {!hasRates
               ? t('header.ratesUnavailable')
-              : isStale
+              : marketClosed
                 ? t('header.marketStale', { timeAgo })
                 : t('header.market', { timeAgo })}
           </span>

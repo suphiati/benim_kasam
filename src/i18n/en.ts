@@ -18,7 +18,7 @@ export const en: Record<TKey, string> = {
   'header.ratesUnavailable': 'Rate data unavailable',
   'header.retry': 'Try again',
   'header.market': 'Market: {timeAgo}',
-  'header.marketStale': 'Market: {timeAgo} (may be closed)',
+  'header.marketStale': 'Market: {timeAgo} (markets closed)',
 
   // ---- Ortak ----
   'common.loading': 'Loading...',
@@ -39,6 +39,7 @@ export const en: Record<TKey, string> = {
   'vault.myAssets_one': 'My Assets ({n} item)',
   'vault.myAssets_other': 'My Assets ({n} items)',
   'vault.liveRates': 'Live Rates',
+  'vault.marketClosedNotice': 'Markets are closed. Values are based on the last data before the market closed.',
   'vault.totalValue': 'Total Vault Value',
   'vault.currencyLabel': 'Vault currency',
   'vault.totalCost': 'Total Cost',
