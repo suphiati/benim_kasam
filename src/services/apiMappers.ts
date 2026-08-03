@@ -22,12 +22,30 @@ export interface RatesWithMeta {
 }
 
 /**
- * Truncgil ölçek düzeltmesi: JPY'yi 1/100 ölçekte kote ediyor (Buying 0.002899
- * diyor ama 1 yen ~0.29 TL). ECB ile çapraz doğrulandı: oran 100.07; diğer tüm
- * para birimleri 1.00, yani sorun yalnızca JPY'de.
+ * Truncgil ölçek düzeltmesi. v4 JPY'yi 1/100 ölçekte kote ediyordu; v3'te JPY
+ * DOĞRU ölçekte geliyor (1 yen ~0,30 TL), bu yüzden artık düzeltme YOK. Tablo
+ * boş bırakıldı (ileride bir birim yine yanlış ölçeğe kayarsa buraya eklenir).
  * NOT: api/rates.ts'te aynı tablo var (proxy yolu için) - birlikte güncellenmeli.
  */
-export const TRUNCGIL_SCALE: Record<string, number> = { JPY: 100 };
+export const TRUNCGIL_SCALE: Record<string, number> = {};
+
+/**
+ * RAW Truncgil v3 altın anahtarları. Proxy yanıtı iç anahtarları (config.truncgilKey:
+ * 'GRA', 'YIA'...) kullanır; ham v3 ise tireli adlar ('gram-altin', '22-ayar-bilezik').
+ * Döviz kodları iki tarafta da aynı (USD=USD), bu yüzden sadece altın eşlenir.
+ * NOT: api/rates.ts'te aynı eşleme var (ters yönde) - birlikte güncellenmeli.
+ */
+const TRUNCGIL_V3_GOLD: Partial<Record<AssetType, string>> = {
+  GRAM_ALTIN: 'gram-altin',
+  CEYREK_ALTIN: 'ceyrek-altin',
+  YARIM_ALTIN: 'yarim-altin',
+  TAM_ALTIN: 'tam-altin',
+  CUMHURIYET_ALTINI: 'cumhuriyet-altini',
+  ATA_ALTIN: 'ata-altin',
+  AYAR14_ALTIN: '14-ayar-altin',
+  AYAR22_BILEZIK: '22-ayar-bilezik',
+  GUMUS: 'gumus',
+};
 
 export function mapTruncgilResponse(data: Record<string, unknown>): RatesWithMeta {
   const rates: LiveRate[] = [];
@@ -53,7 +71,9 @@ export function mapTruncgilResponse(data: Record<string, unknown>): RatesWithMet
 
   for (const assetType of ASSET_TYPES) {
     const config = ASSET_CONFIG[assetType];
-    const item = data[config.truncgilKey] as Record<string, string | number> | undefined;
+    // Ham v3 altın anahtarları tireli ('gram-altin'); proxy yanıtı iç anahtar ('GRA').
+    const sourceKey = isRawTruncgil ? (TRUNCGIL_V3_GOLD[assetType] ?? config.truncgilKey) : config.truncgilKey;
+    const item = data[sourceKey] as Record<string, string | number> | undefined;
     if (item) {
       const scale = isRawTruncgil ? (TRUNCGIL_SCALE[config.truncgilKey] ?? 1) : 1;
       const buyPrice = parsePrice(item['Buying'] || '0') * scale;

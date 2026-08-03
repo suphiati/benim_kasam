@@ -43,29 +43,42 @@ function safeJsonParse(text: string): Record<string, unknown> {
 }
 
 /**
- * Truncgil ölçek düzeltmesi. JPY'yi 1/100 ölçekte kote ediyor:
- * Buying 0.002899 diyor ama 1 yen ~0.29 TL. ECB (Frankfurter) ile çapraz
- * doğrulandı: beklenen/gelen = 100.07. Diğer TÜM para birimleri 1.00 çıktı,
- * yani sorun yalnızca JPY'de.
- *
- * Düzeltme KAYNAK SINIRINDA yapılır (extractTruncgil), aşağısı değil: JPY,
- * Truncgil çökerse ExchangeRate yedeğinden ZATEN doğru ölçekte geliyor.
- * Aşağıda toptan çarpsaydık o durumda 100 kat BÜYÜK olurdu.
- *
- * NOT: src/services/apiMappers.ts'te aynı tablo var (doğrudan-Truncgil yolu için).
- * Bu repoda api/ ve src/ sabitleri bilinçli ayrı - ikisi birlikte güncellenmeli.
+ * Truncgil ölçek düzeltmesi. v4 JPY'yi 1/100 ölçekte kote ediyordu; v3'te JPY
+ * DOĞRU ölçekte (1 yen ~0,30 TL) geldiği için artık düzeltme YOK. Tablo boş -
+ * ileride bir birim yanlış ölçeğe kayarsa buraya iç anahtarıyla eklenir.
+ * NOT: src/services/apiMappers.ts'te aynı tablo var - birlikte güncellenmeli.
  */
-const TRUNCGIL_SCALE: Record<string, number> = { JPY: 100 };
+const TRUNCGIL_SCALE: Record<string, number> = {};
 
-// Ortak iç anahtar listesi (döviz + altın + gümüş)
+// Döviz kodları v3'te de aynı (USD, EUR...): kaynak anahtarı == iç anahtar.
 const CURRENCY_KEYS = ['USD', 'EUR', 'GBP', 'CHF', 'CAD', 'AUD', 'JPY', 'SAR', 'AED', 'RUB', 'CNY', 'NOK', 'SEK', 'KWD', 'BGN', 'GEL'];
-const METAL_KEYS = ['GRA', 'CEYREKALTIN', 'YARIMALTIN', 'TAMALTIN', 'CUMHURIYETALTINI', 'ATAALTIN', 'GUMUS', '14AYARALTIN', 'YIA'];
+
+/**
+ * v3 altın: KAYNAK anahtarı (tireli, 'gram-altin') -> İÇ anahtar (çıktı, apiMappers'ın
+ * config.truncgilKey'i ile eşleşir: 'GRA'). v4 (finans.truncgil.com/v4) sessizce BOŞ
+ * dönüyordu; v3 tam Kapalıçarşı altınını veriyor. NOT: apiMappers.ts'te ters yönlü
+ * eşleme (TRUNCGIL_V3_GOLD) var - birlikte güncellenmeli.
+ */
+const TRUNCGIL_V3_GOLD: Record<string, string> = {
+  'gram-altin': 'GRA',
+  'ceyrek-altin': 'CEYREKALTIN',
+  'yarim-altin': 'YARIMALTIN',
+  'tam-altin': 'TAMALTIN',
+  'cumhuriyet-altini': 'CUMHURIYETALTINI',
+  'ata-altin': 'ATAALTIN',
+  '14-ayar-altin': '14AYARALTIN',
+  '22-ayar-bilezik': 'YIA',
+  'gumus': 'GUMUS',
+};
+
+// Tam snapshot için beklenen altın/gümüş iç anahtarları (tamlık kapısı kullanır).
+const EXPECTED_METAL_KEYS = Object.values(TRUNCGIL_V3_GOLD);
 
 // ============================================================
 // KAYNAK 1 (BİRİNCİL): Truncgil API - Altın + Döviz + Gümüş
 // ============================================================
 async function fetchTruncgil(): Promise<{ data: Record<string, unknown>; timestamp: string }> {
-  const res = await fetch('https://finans.truncgil.com/v4/today.json', {
+  const res = await fetch('https://finans.truncgil.com/v3/today.json', {
     headers: { 'User-Agent': 'BenimKasam/1.0' },
   });
   if (!res.ok) throw new Error(`Truncgil HTTP ${res.status}`);
@@ -76,17 +89,63 @@ async function fetchTruncgil(): Promise<{ data: Record<string, unknown>; timesta
 
 function extractTruncgil(data: Record<string, unknown>): Record<string, RateItem> {
   const rates: Record<string, RateItem> = {};
-  for (const key of [...CURRENCY_KEYS, ...METAL_KEYS]) {
-    const item = data[key] as Record<string, string | number> | undefined;
+  // Döviz: kaynak==iç anahtar. Altın: tireli kaynak -> iç anahtar (v3 eşlemesi).
+  const pairs: Array<[string, string]> = [
+    ...CURRENCY_KEYS.map((k) => [k, k] as [string, string]),
+    ...Object.entries(TRUNCGIL_V3_GOLD),
+  ];
+  for (const [srcKey, outKey] of pairs) {
+    const item = data[srcKey] as Record<string, string | number> | undefined;
     if (!item) continue;
-    const scale = TRUNCGIL_SCALE[key] ?? 1;
+    const scale = TRUNCGIL_SCALE[outKey] ?? 1;
     const buy = parseNum(item['Buying'] ?? '0') * scale;
     const sell = parseNum(item['Selling'] ?? '0') * scale;
     if (validRate(buy, sell)) {
-      rates[key] = { Buying: buy, Selling: sell, Type: (item['Type'] as string) || 'Unknown' };
+      rates[outKey] = { Buying: buy, Selling: sell, Type: (item['Type'] as string) || 'Unknown' };
     }
   }
   return rates;
+}
+
+// ============================================================
+// SUNUCU TARAFI SON-İYİ DEPOSU (Upstash Redis - opsiyonel)
+// Env yoksa sessizce atlanır: o durumda dayanıklılığı CDN stale-if-error sağlar.
+// Kurulum: Vercel > Storage > Upstash for Redis (ücretsiz) -> env otomatik gelir.
+// ============================================================
+const KV_URL = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
+const KV_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
+const LAST_GOOD_KEY = 'benimkasam:rates:lastgood';
+const LAST_GOOD_TTL = 7 * 24 * 60 * 60; // 7 gün
+
+interface LastGood { data: Record<string, RateItem>; timestamp: string; sources: string[] }
+
+async function kvCommand(cmd: unknown[]): Promise<{ result?: string | null } | null> {
+  if (!KV_URL || !KV_TOKEN) return null;
+  const res = await fetch(KV_URL, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${KV_TOKEN}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(cmd),
+  });
+  if (!res.ok) throw new Error(`KV HTTP ${res.status}`);
+  return res.json();
+}
+
+async function kvGetLastGood(): Promise<LastGood | null> {
+  try {
+    const out = await kvCommand(['GET', LAST_GOOD_KEY]);
+    if (!out?.result) return null;
+    return JSON.parse(out.result) as LastGood;
+  } catch {
+    return null;
+  }
+}
+
+async function kvSetLastGood(payload: LastGood): Promise<void> {
+  try {
+    await kvCommand(['SET', LAST_GOOD_KEY, JSON.stringify(payload), 'EX', String(LAST_GOOD_TTL)]);
+  } catch {
+    /* ignore - depo yoksa/hata olursa CDN stale-if-error devrede */
+  }
 }
 
 // ============================================================
@@ -254,22 +313,43 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (divergences.length > 0) console.warn('Kaynak sapmaları:', divergences.join(' | '));
 
-    // ========== SONUÇ ==========
-    if (sources.length === 0) {
-      return res.status(503).json({ error: 'All sources failed', sources: [], failures });
+    // ========== TAMLIK KAPISI + SONUÇ ==========
+    // Altın kalemlerinin TAMAMI yoksa (ör. yalnızca exchangerate döndü) döviz-yalnız
+    // 200 SUNMA: yoksa istemcide altın 0'lanır -> sahte "büyük zarar". Sıralama:
+    //   1) Taze TAM veri -> son-iyi deposunu güncelle, dön.
+    //   2) Eksikse -> sunucudaki son TAM snapshot'ı (Upstash) dön (herkese, ilk açılışta bile).
+    //   3) O da yoksa -> 503. CDN stale-if-error son TAM 200'ü 24 saat servis eder;
+    //      istemci de kendi yedek zincirine (doğrudan v3 / cache) düşer.
+    const goldComplete = EXPECTED_METAL_KEYS.every((k) => finalData[k]);
+
+    res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=120, stale-if-error=86400');
+
+    if (sources.length > 0 && goldComplete) {
+      kvSetLastGood({ data: finalData, timestamp, sources }).catch(() => {});
+      return res.status(200).json({
+        ...finalData,
+        _meta: { sources, failures, divergences, timestamp, fetchedAt: new Date().toISOString() },
+      });
     }
 
-    res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=120');
-    return res.status(200).json({
-      ...finalData,
-      _meta: {
-        sources,
-        failures,
-        divergences,
-        timestamp,
-        fetchedAt: new Date().toISOString(),
-      },
-    });
+    const lastGood = await kvGetLastGood();
+    if (lastGood && EXPECTED_METAL_KEYS.every((k) => lastGood.data[k])) {
+      // sources'a gerçek kaynağı (truncgil/genelpara) koruyup 'last-good' ekliyoruz:
+      // istemci bunu TAM veri sayar (altın var) ama eski timestamp -> "piyasalar kapalı".
+      return res.status(200).json({
+        ...lastGood.data,
+        _meta: {
+          sources: [...(lastGood.sources?.length ? lastGood.sources : ['truncgil']), 'last-good'],
+          failures,
+          timestamp: lastGood.timestamp,
+          fetchedAt: new Date().toISOString(),
+          degraded: true,
+        },
+      });
+    }
+
+    // Ne taze tam veri ne de son-iyi snapshot -> 503 (CDN stale-if-error / istemci yedeği devreye girsin).
+    return res.status(503).json({ error: 'Incomplete data (gold missing) and no last-good snapshot', sources, failures });
   } catch (error) {
     console.error('Rate fetch error:', error);
     return res.status(500).json({ error: 'Failed to fetch rates', sources, failures });

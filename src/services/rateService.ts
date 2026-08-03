@@ -3,7 +3,10 @@ import type { LiveRate } from '../types';
 import { ASSET_TYPES, ASSET_CONFIG } from '../constants/assets';
 import { mapTruncgilResponse, type RatesMeta, type RatesWithMeta } from './apiMappers';
 
-const TRUNCGIL_DIRECT = 'https://finans.truncgil.com/v4/today.json';
+// v3: v4 (finans.truncgil.com/v4) sessizce BOŞ dönüyor ({"Update_Date":...} - fiyat yok).
+// v3 tam veri veriyor (döviz + Kapalıçarşı altın, JPY doğru ölçekte). Ham v3 anahtar
+// eşlemesi apiMappers.mapTruncgilResponse içinde (TRUNCGIL_V3_GOLD).
+const TRUNCGIL_DIRECT = 'https://finans.truncgil.com/v3/today.json';
 
 export interface FetchRatesResult extends RatesWithMeta {
   /**
