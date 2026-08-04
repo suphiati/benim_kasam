@@ -24,7 +24,10 @@ const FETCH_TIMEOUT_MS = 8000; // asılı kalan isteği kes, yedek zincire geç
 
 // Piyasa verisi bu yaştan eskiyse piyasa kapalı kabul edilir: Truncgil Update_Date
 // piyasa kapanınca donar, dolayısıyla yaş kendiliğinden büyür.
-const MARKET_STALE_MS = 45 * 60 * 1000;
+// 90 dk: v3 açık piyasada ~saat başı güncelliyor; 45 dk olsaydı her saatin son
+// çeyreğinde açık piyasada bile yanlışlıkla "kapalı" derdi. Gece/hafta sonu
+// kapanışı saatlerce/günlerce eski olduğundan bu eşikle yine doğru yakalanır.
+const MARKET_STALE_MS = 90 * 60 * 1000;
 
 /**
  * Gerçek Türk piyasası (Kapalıçarşı) kaynakları. exchangerate-api son çare olup

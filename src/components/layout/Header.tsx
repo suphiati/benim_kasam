@@ -48,7 +48,7 @@ export function Header() {
   const liveRates = useVaultStore((s) => s.liveRates);
   const rateSources = useVaultStore((s) => s.rateSources);
   // Piyasa kapalı / veri canlı değil: rateService merkezî olarak hesaplar
-  // (gerçek kaynak yok VEYA veri >45 dk donmuş). Header yalnızca yansıtır.
+  // (gerçek kaynak yok VEYA veri belirli süre donmuş). Header yalnızca yansıtır.
   const marketClosed = useVaultStore((s) => s.marketClosed);
   const { t, locale } = useT();
   const [, setTick] = useState(0);
