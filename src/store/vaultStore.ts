@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import type { Transaction, LiveRate, BaseCurrency } from '../types';
+import type { Transaction, LiveRate, BaseCurrency, AssetType, TransactionType } from '../types';
+import { ASSET_TYPES } from '../constants/assets';
 import * as db from '../db/indexedDb';
 import { fetchLiveRates } from '../services/rateService';
 import { syncService } from '../services/firebaseSyncService';
@@ -224,9 +225,39 @@ export const useVaultStore = create<VaultState>((set, get) => ({
 
   importData: async (json: string) => {
     const data = JSON.parse(json);
-    const txs: Transaction[] = data.transactions || [];
-    for (const tx of txs) {
-      if (!tx.type) tx.type = 'buy';
+    const raw: unknown[] = Array.isArray(data?.transactions) ? data.transactions : [];
+
+    // İçe aktarılan HER kaydı doğrula: bozuk/eksik/kötü biçimli bir kayıt IndexedDB'ye
+    // ve oradan senkronla Firebase'in katı .validate kurallarına sızıp yazmayı bozmasın.
+    // Geçersiz kayıt sessizce atlanır - kısmi/bozuk dosya tüm içe aktarmayı düşürmez.
+    // Türetilen alanlar (totalCost/createdAt) burada yeniden üretilir; uygulamanın kendi
+    // export'u tam Transaction taşıdığı için bu doğrulamadan sorunsuz geçer (geriye uyumlu).
+    const valid: Transaction[] = [];
+    for (const item of raw) {
+      const tx = item as Partial<Transaction>;
+      if (typeof tx.id !== 'string') continue;
+      if (typeof tx.assetType !== 'string' || !(ASSET_TYPES as string[]).includes(tx.assetType)) continue;
+      if (typeof tx.date !== 'string') continue;
+      if (typeof tx.amount !== 'number' || !(tx.amount >= 0)) continue;
+      if (typeof tx.unitPrice !== 'number' || !(tx.unitPrice >= 0)) continue;
+      const type: TransactionType = tx.type === 'sell' ? 'sell' : 'buy';
+      valid.push({
+        id: tx.id,
+        type,
+        assetType: tx.assetType as AssetType,
+        date: tx.date,
+        amount: tx.amount,
+        unitPrice: tx.unitPrice,
+        totalCost: tx.amount * tx.unitPrice,
+        createdAt: typeof tx.createdAt === 'string' ? tx.createdAt : new Date().toISOString(),
+        ...(typeof tx.note === 'string' ? { note: tx.note.slice(0, 2000) } : {}),
+        ...(tx.fxSnapshot && typeof tx.fxSnapshot.USD === 'number' && typeof tx.fxSnapshot.EUR === 'number'
+          ? { fxSnapshot: { USD: tx.fxSnapshot.USD, EUR: tx.fxSnapshot.EUR } }
+          : {}),
+      });
+    }
+
+    for (const tx of valid) {
       await db.addTransaction(tx);
     }
     const all = await db.getAllTransactions();

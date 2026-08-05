@@ -28,9 +28,16 @@ export function QrGenerateModal({ onClose, onConnect }: QrGenerateModalProps) {
       syncService.setVaultId(id);
       await syncService.uploadAllTransactions(transactions);
       onConnect(id);
+      // Davet penceresini aç: bu QR açıkken okuyan yeni cihaz kasaya katılabilsin (Faz-2).
+      syncService.openInviteWindow();
       setUploading(false);
     };
     init();
+
+    // QR ekranı uzun süre açık kalırsa pencereyi tazele; kullanıcı "birkaç dakika içinde
+    // okut" baskısı hissetmesin. Modal kapanınca interval durur, pencere kendiliğinden kapanır.
+    const refresh = setInterval(() => syncService.openInviteWindow(), 10 * 60 * 1000);
+    return () => clearInterval(refresh);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const qrContent = vaultId ? JSON.stringify({ v: 1, vault: vaultId }) : null;

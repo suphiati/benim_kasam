@@ -38,6 +38,15 @@ export function getFirebaseDb(): Database | null {
 }
 
 /**
+ * Anonim oturumun kalıcı UID'si (yoksa null). `ensureAuth()` çözüldükten SONRA
+ * anlamlıdır. Üyelik kaydı (vaults/$vaultId/members/$uid) için kullanılır:
+ * ileride kuralları "yalnızca üye" kilidine geçirmenin temeli.
+ */
+export function getCurrentUid(): string | null {
+  return auth?.currentUser?.uid ?? null;
+}
+
+/**
  * Anonim oturum sağlar. Güvenlik kuralları `auth != null` istediği için
  * her okuma/yazmadan önce çağrılmalı. Idempotent: ilk çağrıda giriş yapar,
  * sonraki çağrılar aynı promise'i döner. Anonim UID kalıcıdır (cihaz sabit).

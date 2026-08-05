@@ -48,7 +48,12 @@ export function QrScanModal({ onClose, onConnect }: QrScanModalProps) {
           try {
             // Yeni format: {"v":1,"vault":"uuid"}
             const data = JSON.parse(decodedText);
-            if (data.v !== 1 || !data.vault) {
+            // vault, Firebase yol segmenti olarak kullanılır: yalnızca crypto.randomUUID()
+            // biçimini kabul et. Tip/biçim kontrolü olmadan nesne ya da '.'/'#'/'/'  içeren
+            // bir değer path'i kırar (çökme) veya beklenmedik düğüme bağlanırdı. Meşru
+            // (eski dahil) QR'lar randomUUID ürettiği için bu kontrolden sorunsuz geçer.
+            const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            if (data.v !== 1 || typeof data.vault !== 'string' || !UUID_RE.test(data.vault)) {
               throw new Error('Invalid format');
             }
             setState({ status: 'connecting' });

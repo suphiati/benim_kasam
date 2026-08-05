@@ -1,11 +1,12 @@
 {
+  "__comment": "FAZ-2 KILIT KURALI — HENUZ DEPLOY ETME. Yalnizca su kosullar saglaninca uygula: (1) Faz-1+davet penceresi iceren uygulama surumu kullanicilara yayildi ve (2) aktif cihazlar bir sure calisip vaults/$vaultId/members/$uid kayitlarini olusturdu. O zaman bu dosyanin icerigini database.rules.json'a kopyalayip 'firebase deploy --only database' calistir. Farki: .read/.write artik 'yalnizca uye' (+ davet penceresi). Bu deploy edilince vaultId sizinti riski (Bulgu 1) tamamen kapanir. Bu '__comment' alanini kopyalarken silebilirsin; Firebase yok sayar ama gereksizdir.",
   "rules": {
     ".read": false,
     ".write": false,
     "vaults": {
       "$vaultId": {
-        ".read": "auth != null",
-        ".write": "auth != null",
+        ".read": "auth != null && data.child('members').child(auth.uid).exists()",
+        ".write": "auth != null && (!data.child('members').exists() || data.child('members').child(auth.uid).exists() || (data.child('openUntil').isNumber() && now < data.child('openUntil').val()))",
         "members": {
           "$uid": { ".validate": "$uid === auth.uid && newData.isBoolean()" }
         },

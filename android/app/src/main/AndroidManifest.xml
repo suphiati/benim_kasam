@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- allowBackup=false: finansal veri (IndexedDB) cihazda şifresiz durur; adb backup
+         veya otomatik bulut yedeğiyle cihaz dışına çıkmasın. Kullanıcının kendi yedeği için
+         uygulama içi "Dışa Aktar" (JSON) ve QR ile cihazlar arası senkron zaten var. -->
     <application
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"

@@ -1,5 +1,5 @@
 import { ref, set, remove, onChildAdded, onChildChanged, onChildRemoved, type Unsubscribe, type Database } from 'firebase/database';
-import { getFirebaseDb, ensureAuth } from '../config/firebase';
+import { getFirebaseDb, ensureAuth, getCurrentUid } from '../config/firebase';
 import type { FxSnapshot, Transaction } from '../types';
 
 const VAULT_ID_KEY = 'benim_kasam_vault_id';
@@ -56,6 +56,7 @@ function fromFirebase(data: FirebaseTransaction, id: string): Transaction {
 }
 
 class FirebaseSyncService {
+  private static readonly INVITE_WINDOW_MS = 15 * 60 * 1000; // Faz-2 davet penceresi: 15 dk
   private vaultId: string | null = null;
   private pendingLocalWrites = new Set<string>();
   private pendingLocalDeletes = new Set<string>();
@@ -93,11 +94,57 @@ class FirebaseSyncService {
 
     // Kurallar auth != null istiyor: önce anonim oturumu garantile, sonra dinle.
     const token = ++this.connectSeq;
-    ensureAuth().then((ok) => {
+    ensureAuth().then(async (ok) => {
       // auth yoksa ya da bu arada disconnect/yeniden-connect olduysa iptal
       if (!ok || token !== this.connectSeq) return;
       const db = getFirebaseDb();
-      if (db) this.attachListeners(db, vaultId);
+      if (!db) return;
+      // Üyeliği ÖNCE yaz, SONRA dinle: Faz-2'de (yalnız-üye okuma) dinleyici, üyelik
+      // kaydı tamamlanmadan başlarsa okuma reddedilirdi. await bu sırayı garantiler.
+      await this.registerMember(db, vaultId);
+      if (token !== this.connectSeq) return; // await sırasında disconnect/yeniden-connect olduysa iptal
+      this.attachListeners(db, vaultId);
+    });
+  }
+
+  /**
+   * Bu cihazın anonim UID'sini kasanın üye listesine yazar (Faz-1).
+   *
+   * Şu an kurallar hâlâ `auth != null`, yani bu yazım kimseyi etkilemez ve hiçbir
+   * mevcut akışı bozmaz; amacı üyelik verisini TOPLAMAYA başlamaktır. İleride kurallar
+   * "yalnızca üye okur/yazar" kilidine (Faz-2) geçirildiğinde, o güne kadar bağlanmış
+   * tüm gerçek cihazlar zaten kayıtlı olacağı için geçiş sorunsuz olur.
+   *
+   * Hata (ör. eski kural sürümü members'ı reddederse) sessizce yutulur: senkronun
+   * kendisi bundan bağımsız çalışmaya devam eder.
+   */
+  private async registerMember(db: Database, vaultId: string): Promise<void> {
+    const uid = getCurrentUid();
+    if (!uid) return;
+    try {
+      await set(ref(db, `vaults/${vaultId}/members/${uid}`), true);
+    } catch {
+      // Eski kural sürümü members'ı reddedebilir; senkron yine de çalışır.
+    }
+  }
+
+  /**
+   * Yeni bir cihazın katılabilmesi için kısa süreli "davet penceresi" açar (Faz-2).
+   *
+   * QR paylaşım ekranı açıkken çağrılır: pencere (openUntil) boyunca QR'ı okuyan yeni
+   * cihaz, henüz üye olmasa da kendini members'a yazabilir; pencere kapanınca kasaya
+   * yalnızca mevcut üyeler erişir. Yalnızca zaten üye olan (QR üreten) cihaz pencereyi
+   * açabilir - saldırgan vaultId'yi bilse bile pencereyi kendisi açamaz.
+   *
+   * Faz-1'de (kural henüz yalnız-üye değil) bu yazım işlevsel olarak etkisizdir ama
+   * zararsızdır; kilit kuralı deploy edildiğinde otomatik olarak devreye girer.
+   */
+  openInviteWindow(): void {
+    ensureAuth().then((ok) => {
+      const db = getFirebaseDb();
+      if (!ok || !db || !this.vaultId) return;
+      const until = Date.now() + FirebaseSyncService.INVITE_WINDOW_MS;
+      set(ref(db, `vaults/${this.vaultId}/openUntil`), until).catch(() => {});
     });
   }
 
