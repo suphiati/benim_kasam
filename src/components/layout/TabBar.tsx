@@ -23,7 +23,11 @@ export function TabBar({ activeTab, onTabChange }: TabBarProps) {
   const { t } = useT();
 
   return (
-    <nav className="bg-white border-t border-gray-200 flex sticky bottom-0 z-50">
+    <nav
+      className="bg-white border-t border-gray-200 flex sticky bottom-0 z-50"
+      // Edge-to-edge: navigation bar alanı kadar alttan güvenli boşluk (butonlar çubuğun altına girmesin).
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
       {tabs.map((tab) => {
         const Icon = tab.icon;
         const isActive = activeTab === tab.id;

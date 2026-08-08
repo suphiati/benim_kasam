@@ -3,6 +3,13 @@
   "rules": {
     ".read": false,
     ".write": false,
+    "config": {
+      ".read": true,
+      ".write": false,
+      "minVersionCode":    { ".validate": "newData.isNumber()" },
+      "latestVersionCode": { ".validate": "newData.isNumber()" },
+      "$other":            { ".validate": false }
+    },
     "vaults": {
       "$vaultId": {
         ".read": "auth != null && data.child('members').child(auth.uid).exists()",

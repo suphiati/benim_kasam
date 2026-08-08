@@ -63,7 +63,11 @@ export function Header() {
   const hasRates = liveRates.length > 0;
 
   return (
-    <header className="bg-vault-800 text-white px-4 py-3 sticky top-0 z-50">
+    <header
+      className="bg-vault-800 text-white px-4 py-3 sticky top-0 z-50"
+      // Edge-to-edge: status bar alanı kadar üstten güvenli boşluk (py-3 alt kısmı korunur).
+      style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top))' }}
+    >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Vault size={24} className="text-gold-400" />

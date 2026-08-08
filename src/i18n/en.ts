@@ -206,4 +206,13 @@ export const en: Record<TKey, string> = {
   'install.android.step1Samsung': 'Open the browser menu (≡)',
   'install.android.step1Other': 'Tap the 3 dots (⋮) at the top right',
   'install.android.step2': 'Tap "Add to Home screen" or "Install app"',
+
+  // ---- App update (native in-app update) ----
+  'update.optionalTitle': 'Update available',
+  'update.optionalDesc': 'A new version of the app is available. Update for a better experience.',
+  'update.forcedTitle': 'Update required',
+  'update.forcedDesc': 'You need to update to the latest version to continue.',
+  'update.action': 'Update',
+  'update.later': 'Later',
+  'update.updating': 'Updating...',
 };

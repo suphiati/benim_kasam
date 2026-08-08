@@ -221,6 +221,15 @@ export const tr = {
   'install.android.step1Samsung': 'Tarayıcı menüsünden (≡)',
   'install.android.step1Other': 'Sağ üstteki 3 noktaya (⋮) bas',
   'install.android.step2': '"Ana ekrana ekle" veya "Uygulamayı yükle" seçeneğine bas',
+
+  // ---- Uygulama güncelleme (native in-app update) ----
+  'update.optionalTitle': 'Güncelleme mevcut',
+  'update.optionalDesc': 'Uygulamanın yeni bir sürümü var. Daha iyi bir deneyim için güncelleyin.',
+  'update.forcedTitle': 'Güncelleme gerekli',
+  'update.forcedDesc': 'Devam edebilmek için uygulamayı en son sürüme güncellemeniz gerekiyor.',
+  'update.action': 'Güncelle',
+  'update.later': 'Daha sonra',
+  'update.updating': 'Güncelleniyor...',
 } as const;
 
 export type TKey = keyof typeof tr;

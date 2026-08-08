@@ -36,6 +36,10 @@ body {
   flex-direction: column;
   background: white;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
+  /* Edge-to-edge: yatay çentik/kavisli köşe alanlarından kaçın (dikey çubuklar
+     Header/TabBar'da ele alınır). Dikey modda bu değerler 0'dır, etkisizdir. */
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
 }
 
 @media (min-width: 768px) {
