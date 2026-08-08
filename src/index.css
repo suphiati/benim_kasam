@@ -40,6 +40,10 @@ body {
      Header/TabBar'da ele alınır). Dikey modda bu değerler 0'dır, etkisizdir. */
   padding-left: env(safe-area-inset-left, 0px);
   padding-right: env(safe-area-inset-right, 0px);
+  /* AdMob alt banner yüksekliği kadar boşluk: native banner ekranın en altına
+     bindirir; bu boşluk sayesinde TabBar banner'ın üstünde kalır. Değişken
+     ads.ts tarafından (SizeChanged olayıyla) ayarlanır, banner yokken 0'dır. */
+  padding-bottom: var(--admob-banner-height, 0px);
 }
 
 @media (min-width: 768px) {

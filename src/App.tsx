@@ -6,6 +6,7 @@ import { useRatePolling } from './hooks/useRatePolling';
 import { useFirebaseSync } from './hooks/useFirebaseSync';
 import { useAppLock } from './hooks/useAppLock';
 import { useAppUpdate } from './hooks/useAppUpdate';
+import { showAppBanner, hideAppBanner } from './services/ads';
 import { Header } from './components/layout/Header';
 import { TabBar, type TabId } from './components/layout/TabBar';
 import { VaultPage } from './pages/VaultPage';
@@ -38,6 +39,18 @@ export default function App() {
       StatusBar.setStyle({ style: Style.Dark }).catch(() => {});
     }
   }, []);
+
+  // AdMob alt banner: yalnızca kasa görünürken göster. Kilit ekranı ve gizlilik
+  // örtüsü opak katmanlardır; native banner WebView'in ÜstÜnde çizildiği için
+  // kilitliyken gizlenmezse örtünün üzerinde reklam görünür (kasa sızıntısı).
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    if (locked || covered) {
+      hideAppBanner();
+    } else {
+      showAppBanner();
+    }
+  }, [locked, covered]);
 
   useRatePolling();
 
