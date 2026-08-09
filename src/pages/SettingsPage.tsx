@@ -5,6 +5,8 @@ import { useState } from 'react';
 import { ConfirmModal } from '../components/common/ConfirmModal';
 import { syncService } from '../services/firebaseSyncService';
 import { isNative, getBiometricStatus, isLockEnabled, setLockEnabled, authenticate } from '../services/biometric';
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
 import { BASE_CURRENCIES, CURRENCY_META } from '../utils/currency';
 import { useT } from '../hooks/useT';
 import { LANGS, LANG_LABEL, type TKey } from '../i18n';
@@ -68,15 +70,47 @@ export function SettingsPage({ isConnected, onDisconnect }: SettingsPageProps) {
     return () => window.removeEventListener('beforeinstallprompt', handler);
   });
 
-  const handleExport = () => {
+  const handleExport = async () => {
     const json = exportData();
+    // Dosya adı bilinçli olarak SABİT İngilizce: dosya diskte kalıcı, dil ise
+    // değişebilir - iki dilde iki farklı ad yedekleri karıştırırdı.
+    const fileName = `benim-kasam-backup-${new Date().toISOString().split('T')[0]}.json`;
+
+    // Native (Capacitor Android/iOS): tarayıcı indirmesi (<a download> + blob:) WebView'da
+    // ÇALIŞMAZ - DownloadListener yoktur ve DownloadManager blob: şemasını indiremez.
+    // Dosyayı Cache'e yazıp sistem paylaş sayfasıyla veriyoruz (depolama izni gerekmez;
+    // kullanıcı Dosyalar/Drive'a kaydedebilir ya da bir uygulamaya gönderebilir).
+    if (isNative()) {
+      try {
+        const { uri } = await Filesystem.writeFile({
+          path: fileName,
+          data: json,
+          directory: Directory.Cache,
+          encoding: Encoding.UTF8,
+        });
+        await Share.share({
+          title: 'BenimKasam',
+          url: uri,
+          dialogTitle: t('settings.export'),
+        });
+      } catch (err) {
+        // Kullanıcı paylaş sayfasını iptal ederse ('Share canceled') sessiz geç;
+        // gerçek yazma/paylaşım hatasında kullanıcıya geri bildir (sessizce yutma).
+        const msg = err instanceof Error ? err.message.toLowerCase() : '';
+        if (!msg.includes('cancel')) {
+          setImportStatus({ ok: false, messageKey: 'settings.exportError' });
+          setTimeout(() => setImportStatus(null), 3000);
+        }
+      }
+      return;
+    }
+
+    // Web / PWA: klasik tarayıcı indirmesi (burada doğru çalışır).
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    // Dosya adı bilinçli olarak SABİT İngilizce: dosya diskte kalıcı, dil ise
-    // değişebilir - iki dilde iki farklı ad yedekleri karıştırırdı.
-    a.download = `benim-kasam-backup-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = fileName;
     a.click();
     URL.revokeObjectURL(url);
   };
