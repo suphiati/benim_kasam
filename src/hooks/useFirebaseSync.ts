@@ -37,10 +37,15 @@ export function useFirebaseSync() {
   );
 
   const disconnect = useCallback(() => {
+    // Sunucudaki üyelik kaydını da sil: yalnız yerel vaultId silinince cihaz
+    // Firebase'de kasanın üyesi olarak kalıyor ve "senkronize cihaz" sayılmaya
+    // devam ediyordu. Önce id'yi oku (clearVaultId onu sıfırlar), sonra temizle.
+    const id = syncService.getVaultId();
     syncService.disconnect();
     syncService.clearVaultId();
     setVaultIdState(null);
     setIsConnected(false);
+    if (id) void syncService.leaveVault(id);
   }, []);
 
   // Auto-connect on mount if vault ID exists

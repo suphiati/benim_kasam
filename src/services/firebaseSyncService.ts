@@ -1,4 +1,4 @@
-import { ref, set, remove, onChildAdded, onChildChanged, onChildRemoved, type Unsubscribe, type Database } from 'firebase/database';
+import { ref, set, get, update, remove, onValue, onChildAdded, onChildChanged, onChildRemoved, type Unsubscribe, type Database } from 'firebase/database';
 import { getFirebaseDb, ensureAuth, getCurrentUid } from '../config/firebase';
 import type { FxSnapshot, Transaction } from '../types';
 
@@ -129,6 +129,96 @@ class FirebaseSyncService {
   }
 
   /**
+   * Bu cihazı verilen kasanın üyesi yapar (QR üretim akışı için genel giriş noktası).
+   * connect() dışında da üyelik gerekir: QR ekranı, eşleşme HENÜZ olmadan kasayı
+   * hazırlar; üyelik olmadan Faz-2 kuralında "kasanın sahibi yok" durumu oluşur ve
+   * vaultId'yi bilen herkes yazabilir.
+   */
+  async joinVault(vaultId: string): Promise<boolean> {
+    const ok = await ensureAuth();
+    const db = getFirebaseDb();
+    if (!ok || !db) return false;
+    await this.registerMember(db, vaultId);
+    return true;
+  }
+
+  /**
+   * Bu cihazın üyelik kaydını kasadan siler (eşleştirmeyi kaldırma).
+   *
+   * Yalnız yerelde vaultId silmek yetmiyordu: cihaz Firebase'de members altında
+   * kayıtlı kalıyor, yani "senkronize cihaz" olarak görünmeye devam ediyordu.
+   * Sunucudaki iz de temizlenmeli. Hata sessizce yutulur - yerel kopma yine olur.
+   */
+  async leaveVault(vaultId?: string): Promise<void> {
+    const id = vaultId ?? this.vaultId ?? localStorage.getItem(VAULT_ID_KEY);
+    if (!id) return;
+    try {
+      const ok = await ensureAuth();
+      const db = getFirebaseDb();
+      const uid = getCurrentUid();
+      if (!ok || !db || !uid) return;
+      await remove(ref(db, `vaults/${id}/members/${uid}`));
+    } catch {
+      // Ağ/kural hatası: yerel kopma yeterli, sunucu kaydı sonraki denemede silinir.
+    }
+  }
+
+  /**
+   * Bu cihazdan BAŞKA bir üye var mı? QR ekranı gerçek eşleşmeyi böyle anlar:
+   * ikinci bir uid members'a düştüğü an karşı cihaz QR'ı okumuş demektir.
+   */
+  async hasPeerMember(vaultId: string): Promise<boolean> {
+    const ok = await ensureAuth();
+    const db = getFirebaseDb();
+    if (!ok || !db) return false;
+    const uid = getCurrentUid();
+    const snap = await get(ref(db, `vaults/${vaultId}/members`));
+    const members = (snap.val() as Record<string, boolean> | null) || {};
+    return Object.keys(members).some((k) => k !== uid);
+  }
+
+  /**
+   * members düğümünü izler; başka bir cihaz katıldığında bir kez callback çağırır.
+   * Dönen fonksiyon dinlemeyi bırakır.
+   */
+  watchPeerJoin(vaultId: string, onPeerJoined: () => void): () => void {
+    let stopped = false;
+    let unsub: Unsubscribe | null = null;
+    ensureAuth().then((ok) => {
+      const db = getFirebaseDb();
+      if (stopped || !ok || !db) return;
+      const uid = getCurrentUid();
+      unsub = onValue(ref(db, `vaults/${vaultId}/members`), (snap) => {
+        const members = (snap.val() as Record<string, boolean> | null) || {};
+        if (Object.keys(members).some((k) => k !== uid)) onPeerJoined();
+      });
+    });
+    return () => {
+      stopped = true;
+      unsub?.();
+    };
+  }
+
+  /**
+   * QR ekranında oluşturulmuş ama kimsenin okumadığı kasayı sunucudan siler.
+   *
+   * QR ekranı açılır açılmaz kasa oluşturulup veriler yükleniyor; kullanıcı QR'ı
+   * kimseye okutmadan kapatırsa geriye sahipsiz bir kasa ve "eşleşmiş" görünen bir
+   * cihaz kalırdı. Silmeden önce son bir kez üye kontrolü yapılır: tam o anda
+   * katılan bir cihazın verisi yanlışlıkla silinmesin.
+   */
+  async abandonVault(vaultId: string): Promise<void> {
+    try {
+      if (await this.hasPeerMember(vaultId)) return;
+      const db = getFirebaseDb();
+      if (!db) return;
+      await remove(ref(db, `vaults/${vaultId}`));
+    } catch {
+      // Silinemezse de zararsız: yerelde vaultId yazılmadığı için cihaz bağlanmaz.
+    }
+  }
+
+  /**
    * Yeni bir cihazın katılabilmesi için kısa süreli "davet penceresi" açar (Faz-2).
    *
    * QR paylaşım ekranı açıkken çağrılır: pencere (openUntil) boyunca QR'ı okuyan yeni
@@ -139,12 +229,13 @@ class FirebaseSyncService {
    * Faz-1'de (kural henüz yalnız-üye değil) bu yazım işlevsel olarak etkisizdir ama
    * zararsızdır; kilit kuralı deploy edildiğinde otomatik olarak devreye girer.
    */
-  openInviteWindow(): void {
+  openInviteWindow(vaultId?: string): void {
     ensureAuth().then((ok) => {
       const db = getFirebaseDb();
-      if (!ok || !db || !this.vaultId) return;
+      const id = vaultId ?? this.vaultId;
+      if (!ok || !db || !id) return;
       const until = Date.now() + FirebaseSyncService.INVITE_WINDOW_MS;
-      set(ref(db, `vaults/${this.vaultId}/openUntil`), until).catch(() => {});
+      set(ref(db, `vaults/${id}/openUntil`), until).catch(() => {});
     });
   }
 
@@ -209,16 +300,28 @@ class FirebaseSyncService {
     this.initialLoadDone = false;
   }
 
-  async uploadAllTransactions(transactions: Transaction[]): Promise<void> {
+  /**
+   * Tüm işlemleri kasaya yükler. TEK multi-path update ile: eskiden işlem başına
+   * ayrı `await set(...)` vardı, yani 200 kayıtlı bir kasada 200 gidiş-dönüş -
+   * yavaş bağlantıda QR ekranı dakikalarca "yükleniyor"da kalıyordu.
+   *
+   * Başarısızlıkta ARTIK SESSİZ DEĞİL: promise reject eder ki çağıran hata
+   * gösterebilsin (auth kapalı / kural reddi / ağ yok).
+   */
+  async uploadAllTransactions(transactions: Transaction[], vaultId?: string): Promise<void> {
     const ok = await ensureAuth();
     const db = getFirebaseDb();
-    if (!ok || !db || !this.vaultId) return;
+    const id = vaultId ?? this.vaultId;
+    if (!ok) throw new Error('auth-unavailable');
+    if (!db || !id) throw new Error('sync-unavailable');
+    if (transactions.length === 0) return;
 
+    const payload: Record<string, FirebaseTransaction> = {};
     for (const tx of transactions) {
       this.pendingLocalWrites.add(tx.id);
-      const txRef = ref(db, `vaults/${this.vaultId}/transactions/${tx.id}`);
-      await set(txRef, toFirebase(tx));
+      payload[tx.id] = toFirebase(tx);
     }
+    await update(ref(db, `vaults/${id}/transactions`), payload);
   }
 
   pushTransaction(tx: Transaction): void {

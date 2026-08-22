@@ -176,6 +176,8 @@ export const en: Record<TKey, string> = {
   'qr.synced_other': '{n} transactions synced',
   'qr.scanHint': 'Scan this QR from BenimKasam on your other phone',
   'qr.share': 'Share',
+  'qr.errorPrepare': 'Could not prepare the vault. Check your internet connection and try again.',
+  'qr.retry': 'Try again',
   'qr.showToCamera': 'Show the QR code to the camera',
   'qr.connecting': 'Connecting...',
   'qr.connectingDesc': 'Syncing data',

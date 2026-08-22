@@ -191,6 +191,8 @@ export const tr = {
   'qr.synced_other': '{n} işlem senkronize edildi',
   'qr.scanHint': "Diğer telefondaki BenimKasam'dan bu QR'ı okutun",
   'qr.share': 'Paylaş',
+  'qr.errorPrepare': 'Kasa hazırlanamadı. İnternet bağlantınızı kontrol edip tekrar deneyin.',
+  'qr.retry': 'Tekrar dene',
   'qr.showToCamera': 'QR kodu kameraya gösterin',
   'qr.connecting': 'Bağlanıyor...',
   'qr.connectingDesc': 'Veriler senkronize ediliyor',
