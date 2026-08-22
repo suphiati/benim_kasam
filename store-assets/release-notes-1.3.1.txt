@@ -1,0 +1,16 @@
+BenimKasam 1.3.1 (versionCode 17) — Sürüm Notları
+=================================================
+
+--- Türkçe (tr-TR) ---
+Bu sürümde:
+• Cihaz eşleştirme deneyimi iyileştirildi.
+• Kasa verileriniz cihazlar arasında daha hızlı aktarılıyor.
+• Genel kararlılık iyileştirmeleri ve küçük hata düzeltmeleri yapıldı.
+Görüş ve önerileriniz bizim için değerli.
+
+--- English (en-US) ---
+What's new:
+• Improved the device pairing experience.
+• Your vault data now transfers between devices faster.
+• General stability improvements and minor bug fixes.
+We'd love to hear your feedback.

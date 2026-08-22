@@ -1,0 +1,16 @@
+BenimKasam 1.3.0 (versionCode 15) — Sürüm Notları
+=================================================
+
+--- Türkçe (tr-TR) ---
+Bu sürümde:
+• BenimKasam'ı ücretsiz sunmaya devam edebilmek için ekranın altına, kullanımı bölmeyen sade bir reklam alanı eklendi.
+• Verileriniz her zamanki gibi yalnızca kendi cihazınızda saklanır; zorunlu hesap veya buluta yükleme yoktur.
+• Genel kararlılık iyileştirmeleri ve küçük hata düzeltmeleri yapıldı.
+Görüş ve önerileriniz bizim için değerli.
+
+--- English (en-US) ---
+What's new:
+• To keep BenimKasam free, we added a small, non-intrusive ad banner at the bottom of the screen.
+• Your data still stays only on your own device, as always — no forced account or cloud upload.
+• General stability improvements and minor bug fixes.
+We'd love to hear your feedback.
