@@ -7,8 +7,9 @@
 #
 #   smoke   : Simülatör derlemesi + açılış duman testi + ekran görüntüsü. Her push'ta.
 #             (src/smokeTest.ts: Firebase anonim oturum, RTDB okuma, native köprü)
-#   release : İmzalı IPA → App Store Connect'e yükleme. YALNIZCA elle tetiklenince
-#             (Actions → iOS → Run workflow → "upload" işaretli).
+#   release : İmzalı IPA → App Store Connect'e yükleme. YALNIZCA `ios-v*` etiketi push'lanınca
+#             (git tag ios-v1.3.1 && git push origin ios-v1.3.1) ya da elle: Actions → iOS →
+#             Run workflow → "upload" (elle tetikleme yalnızca main'deki iş akışında görünür).
 #
 # İMZALAMA: codemagic-cli-tools (açık kaynak; Codemagic hesabı GEREKMEZ). Sabit bir RSA
 # anahtarıyla (CERTIFICATE_PRIVATE_KEY) App Store Connect API üzerinden Apple Distribution
@@ -30,6 +31,8 @@ name: iOS
 on:
   push:
     branches: [main, ios-app-store]
+    # Etiket push'larında paths filtresi uygulanmaz; etiket her daldaki commit'ten yayın alır.
+    tags: ['ios-v*']
     paths:
       - 'src/**'
       - 'ios/**'
@@ -146,7 +149,7 @@ jobs:
   release:
     name: İmzala ve App Store Connect'e yükle
     needs: smoke
-    if: github.event_name == 'workflow_dispatch' && inputs.upload
+    if: startsWith(github.ref, 'refs/tags/ios-v') || (github.event_name == 'workflow_dispatch' && inputs.upload)
     runs-on: macos-26
     timeout-minutes: 60
     env:
