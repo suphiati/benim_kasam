@@ -33,7 +33,7 @@ interface RemoteConfig {
 
 // App Store'daki sayısal Apple kimliği (App Store Connect > Uygulama Bilgileri > Apple Kimliği).
 // iOS'ta openAppStore bunu zorunlu ister; boşken iOS güncelleme kontrolü kapalı kalır.
-const APP_STORE_ID = '';
+const APP_STORE_ID = '6810742395';
 
 // config `.read: true` (auth gerektirmez): açılışta anonim oturumu beklemeden okunur.
 async function getRemoteConfig(): Promise<RemoteConfig | null> {

@@ -56,6 +56,9 @@ export async function authenticate(): Promise<boolean> {
 // Kilit ayarı (Preferences = native güvenli depolama). Varsayılan: açık.
 export async function isLockEnabled(): Promise<boolean> {
   if (!isNative()) return false;
+  // iOS CI duman testi derlemesi: simülatör "parolalı" sayıldığından açılış kilidi arayüzü
+  // örtüyor, ekran görüntüsünde yerleşim görülemiyordu. Normal derlemede bu satır elenir.
+  if (import.meta.env.VITE_SMOKE_TEST === '1') return false;
   const { value } = await Preferences.get({ key: LOCK_ENABLED_KEY });
   return value === null ? true : value === 'true';
 }
