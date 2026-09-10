@@ -1,4 +1,5 @@
 import { Capacitor } from '@capacitor/core';
+import { Directory, Encoding, Filesystem } from '@capacitor/filesystem';
 import { ref, get } from 'firebase/database';
 import { ensureAuth, getCurrentUid, getFirebaseDb } from './config/firebase';
 import { getBiometricStatus } from './services/biometric';
@@ -11,8 +12,10 @@ import { getBiometricStatus } from './services/biometric';
  * getAuth takılması), RTDB okuma (capacitor:// kökeninden) ve native eklenti köprüsü. Kur
  * verisi ayrıca doğrulanmaz: Header'daki "Piyasa: ..." satırı ekran görüntüsünde görünür.
  *
- * Sonuçlar hem konsola ([smoke] satırları → Capacitor debug çıktısı → simülatör logu) hem de
- * ekranın ortasına yazılır (ekran görüntüsünde okunur). CI `[smoke] done` satırını bekler.
+ * Sonuçlar üç yere yazılır: konsola, ekranın ortasına (ekran görüntüsünde okunur) ve
+ * uygulamanın Documents/smoke.txt dosyasına. CI bu dosyayı simülatördeki uygulama kabından
+ * okur (`simctl get_app_container`) ve `[smoke] done` satırını bekler. Konsola güvenilmez:
+ * stdout TTY değilken tamponlanır, uygulama açıkken dışarı hiç düşmeyebilir.
  */
 const TIMEOUT_MS = 20_000;
 
@@ -37,6 +40,16 @@ function render(lines: string[]): void {
   el.textContent = lines.join('\n');
 }
 
+// Yazmalar sıraya alınır: art arda writeFile çağrıları birbirini ezmesin.
+let writeChain: Promise<unknown> = Promise.resolve();
+
+function persist(lines: string[]): void {
+  const data = lines.join('\n') + '\n';
+  writeChain = writeChain
+    .then(() => Filesystem.writeFile({ path: 'smoke.txt', directory: Directory.Documents, data, encoding: Encoding.UTF8 }))
+    .catch((err) => console.warn('[smoke] sonuç dosyası yazılamadı', err));
+}
+
 export async function runSmokeTest(): Promise<void> {
   const lines: string[] = [];
   const report = (key: string, value: string) => {
@@ -44,6 +57,7 @@ export async function runSmokeTest(): Promise<void> {
     console.log(line);
     lines.push(line);
     render(lines);
+    persist(lines);
   };
 
   report('platform', Capacitor.getPlatform());
@@ -73,4 +87,5 @@ export async function runSmokeTest(): Promise<void> {
   }
 
   report('done', 'true');
+  await writeChain;
 }
