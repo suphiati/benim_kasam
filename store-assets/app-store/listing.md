@@ -2,6 +2,7 @@
 
 İlk iOS sürümü (1.3.1) için App Store Connect'e girilecek metinler ve beyanlar.
 Metinler Play mağaza metninden uyarlandı; iOS'a özgü ifadeler (Face ID / Touch ID) düzeltildi.
+App Store açıklamada emoji kabul etmiyor ("invalid characters"), bölüm başlıkları bu yüzden büyük harfle yazıldı.
 
 ## Uygulama bilgileri
 
@@ -14,7 +15,7 @@ Metinler Play mağaza metninden uyarlandı; iOS'a özgü ifadeler (Face ID / Tou
 | Paket kimliği | com.suphiatilim.benimkasam |
 | SKU | benimkasam-ios |
 | Birincil kategori | Finans |
-| Telif hakkı | 2026 Suphi Atılım Çeliköz |
+| Telif hakkı | 2026 RiskManage Studio |
 | Destek URL'si | https://benim-kasam.vercel.app |
 | Gizlilik politikası URL'si | https://benim-kasam.vercel.app/gizlilik.html |
 | Fiyat | Ücretsiz, tüm ülkeler |
@@ -29,18 +30,18 @@ Altın ve döviz birikiminizi canlı kurlarla takip edin. Üyelik gerektirmez, v
 
 BenimKasam, döviz ve altın varlıklarınızı tek yerden takip etmenizi sağlayan sade ve güvenli bir kişisel kasa uygulamasıdır.
 
-💰 Neler yapabilirsiniz?
+NELER YAPABİLİRSİNİZ?
 • Dolar, Euro ve diğer dövizler ile gram, çeyrek, yarım, tam, Cumhuriyet ve Ata altını, 14/22 ayar altın ve gümüş alım-satımlarınızı kaydedin
 • Canlı kurlarla varlıklarınızın güncel değerini ve kâr/zarar durumunu anında görün
 • Ortalama maliyet ile gerçekleşen ve gerçekleşmemiş kâr/zarar otomatik hesaplansın
 • Kasanızın toplam değerini Türk lirası, dolar veya euro cinsinden görüntüleyin
 
-🔒 Gizlilik ve güvenlik önce gelir
+GİZLİLİK VE GÜVENLİK ÖNCE GELİR
 • Verileriniz öncelikle kendi cihazınızda saklanır
 • Face ID / Touch ID veya cihaz parolası ile uygulama kilidi
 • Ad, e-posta veya kişisel bilgi istemez; üyelik gerektirmez
 
-📲 Kolaylıklar
+KOLAYLIKLAR
 • QR kod ile cihazlar arası senkronizasyon (isteğe bağlı)
 • Verilerinizi dosya olarak yedekleyin ve geri yükleyin
 • İnternet olmadan da kayıtlarınıza erişin
@@ -62,18 +63,18 @@ Track your gold and currency savings with live prices. No sign-up, your data sta
 
 BenimKasam is a simple and secure personal vault app for tracking your currency and gold holdings in one place.
 
-💰 What you can do
+WHAT YOU CAN DO
 • Record purchases and sales of US dollars, euros and other currencies, gram gold, Turkish gold coins (Çeyrek, Yarım, Tam, Cumhuriyet, Ata), 14K/22K gold and silver
 • See the current value and profit/loss of your holdings instantly with live prices
 • Average cost plus realized and unrealized profit/loss are calculated automatically
 • View your vault's total value in Turkish lira, US dollars or euros
 
-🔒 Privacy and security first
+PRIVACY AND SECURITY FIRST
 • Your data is stored primarily on your own device
 • App lock with Face ID / Touch ID or device passcode
 • No name, email or personal information required; no sign-up
 
-📲 Convenience
+CONVENIENCE
 • Optional sync between devices with a QR code
 • Back up and restore your data as a file
 • Access your records even without an internet connection
@@ -121,4 +122,7 @@ Market prices are fetched from public sources through our own server (benim-kasa
 
 ## Ekran görüntüleri
 
-`store-assets/app-store/screenshots/` — iPhone 6,9 inç, 1320 × 2868 px (PNG).
+`store-assets/app-store/screenshots/` — gerçek arayüzden, örnek veriyle 6 ekran (PNG):
+
+- `6.5-inch/` — 1284 × 2778 px. **App Store Connect'e yüklenen set bu**; Apple 6,5" seti tüm iPhone boyutlarında kullanıyor. Sıra önemli (ilk 3'ü kurulum ekranında görünür): tr-1 → tr-6.
+- `6.9-inch/` — 1320 × 2868 px (kaynak çekimler; 6,5" set bunlardan küçültüldü).
