@@ -44,14 +44,14 @@
   </header>
 
   <div class="wrap">
-    <p class="updated">Son güncelleme: 14 Temmuz 2026</p>
+    <p class="updated">Son güncelleme: 10 Eylül 2026</p>
 
     <div class="tldr">
-      <strong>Özet:</strong> BenimKasam kişisel bir varlık takip uygulamasıdır. <strong>Adınızı, e-postanızı, telefonunuzu veya konumunuzu toplamaz.</strong> Girdiğiniz işlem kayıtları öncelikle <strong>kendi cihazınızda</strong> saklanır. Yalnızca siz açıkça QR ile eşleştirirseniz, verileriniz cihazlar arası senkronizasyon için anonim olarak buluta (Firebase) yüklenir. Reklam yoktur, sizi takip etmeyiz.
+      <strong>Özet:</strong> BenimKasam kişisel bir varlık takip uygulamasıdır. <strong>Adınızı, e-postanızı, telefonunuzu veya konumunuzu toplamaz.</strong> Girdiğiniz işlem kayıtları öncelikle <strong>kendi cihazınızda</strong> saklanır. Yalnızca siz açıkça QR ile eşleştirirseniz, verileriniz cihazlar arası senkronizasyon için anonim olarak buluta (Firebase) yüklenir. Uygulamada reklam gösterilmez ve sizi takip etmeyiz. Android sürümünde daha önce eklenmiş bir reklam kitaplığı hâlâ bulunur; ayrıntılar <a href="#reklamlar">Reklamlar</a> bölümündedir.
     </div>
 
     <h2>1. Bu uygulama kimindir</h2>
-    <p>BenimKasam ("uygulama"), döviz ve altın varlıklarınızı takip etmenizi sağlayan kişisel bir araçtır. Bu politika, uygulamayı kullanırken verilerinizin nasıl işlendiğini açıklar.</p>
+    <p>BenimKasam ("uygulama"), döviz ve altın varlıklarınızı takip etmenizi sağlayan kişisel bir araçtır; Android (Google Play), iOS (App Store) ve web üzerinden kullanılabilir. Bu politika, uygulamayı kullanırken verilerinizin nasıl işlendiğini açıklar.</p>
 
     <h2>2. Topladığımız ve toplamadığımız veriler</h2>
     <div class="card">
@@ -60,7 +60,7 @@
         <li>Ad, soyad, e-posta, telefon numarası</li>
         <li>Konum bilgisi</li>
         <li>Rehber, fotoğraf veya diğer cihaz içeriği</li>
-        <li>Reklam kimliği veya takip tanımlayıcıları</li>
+        <li>Takip amaçlı tanımlayıcılar (iOS ve web sürümleri cihazın reklam kimliğine erişmez; Android için <a href="#reklamlar">Reklamlar</a> bölümüne bakın)</li>
         <li>Kayıt/giriş hesabı (uygulama hesap oluşturmaz)</li>
       </ul>
       <h3>İşlediklerimiz</h3>
@@ -87,32 +87,41 @@
     <p>Uygulama, güncel döviz ve altın fiyatlarını göstermek için üçüncü taraf finans kaynaklarından (ör. Truncgil, GenelPara, ExchangeRate-API) veri <strong>çeker</strong>. Bu istekler yalnızca fiyat bilgisini <strong>okur</strong>; bu kaynaklara <span class="yes">hiçbir kişisel veriniz veya işlem kaydınız gönderilmez</span>.</p>
 
     <h2>6. Biyometrik kilit</h2>
-    <p>Uygulamayı parmak izi, yüz tanıma veya cihaz PIN'i ile kilitleyebilirsiniz. Bu doğrulama tamamen <strong>cihazınızın işletim sistemi</strong> tarafından yapılır. Uygulama biyometrik verilerinize <span class="no">erişmez ve saklamaz</span>; yalnızca "başarılı/başarısız" sonucunu alır.</p>
+    <p>Uygulamayı parmak izi, yüz tanıma (Face ID / Touch ID) veya cihaz PIN'i/parolası ile kilitleyebilirsiniz. Bu doğrulama tamamen <strong>cihazınızın işletim sistemi</strong> tarafından yapılır. Uygulama biyometrik verilerinize <span class="no">erişmez ve saklamaz</span>; yalnızca "başarılı/başarısız" sonucunu alır.</p>
 
-    <h2>7. Kullandığımız üçüncü taraf hizmetler</h2>
+    <h2 id="reklamlar">7. Reklamlar</h2>
+    <p>BenimKasam'da <strong>reklam gösterilmez</strong>.</p>
+    <ul>
+      <li><strong>iOS (App Store) ve web:</strong> reklam veya reklam kitaplığı yoktur; cihazınızın reklam kimliğine erişilmez ve sizi takip etmeyiz.</li>
+      <li><strong>Android (Google Play):</strong> uygulamanın mevcut Android sürümünde daha önce eklenmiş <strong>Google Mobile Ads (AdMob)</strong> kitaplığı bulunur. Şu anda reklam gösterilmez; ancak bu kitaplık çalıştığında cihazınızın <strong>reklam kimliğini</strong> ve temel cihaz bilgilerini Google'a iletebilir. Google'ın bu verileri nasıl kullandığı: <a href="https://policies.google.com/technologies/ads" target="_blank" rel="noopener">policies.google.com/technologies/ads</a>. Reklam kimliğinizi Android'de <em>Ayarlar → Google → Reklamlar</em> bölümünden sıfırlayabilir veya silebilirsiniz.</li>
+      <li>İleride uygulamaya reklam eklenirse bu sayfa önceden güncellenir; gerektiğinde (ör. iOS'ta takip izni, AB/Birleşik Krallık'ta rıza) önce izniniz istenir.</li>
+    </ul>
+
+    <h2>8. Kullandığımız üçüncü taraf hizmetler</h2>
     <ul>
       <li><strong>Google Firebase</strong> (Realtime Database, Anonymous Authentication) — yalnızca senkronizasyonu açtıysanız. Google'ın gizlilik politikası: <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">policies.google.com/privacy</a></li>
+      <li><strong>Google Mobile Ads (AdMob)</strong> — yalnızca Android sürümünde bulunan kitaplık; şu anda reklam gösterilmez (bkz. <a href="#reklamlar">Reklamlar</a>).</li>
       <li><strong>Kur veri sağlayıcıları</strong> — fiyat okuma (kişisel veri gönderilmez).</li>
       <li><strong>Barındırma:</strong> uygulama ve fiyat proxy'si Vercel üzerinde barındırılır.</li>
     </ul>
 
-    <h2>8. Veri güvenliği</h2>
+    <h2>9. Veri güvenliği</h2>
     <p>Bulut senkronizasyonu kullanıldığında veriler cihaz ile Firebase arasında şifreli bağlantı (HTTPS/TLS) üzerinden aktarılır. Erişim, gizli rastgele kasa kimliği ve kimlik doğrulama kuralları ile sınırlandırılır. Hiçbir sistem %100 güvenli olmasa da verilerinizi korumak için makul önlemler alırız.</p>
 
-    <h2>9. Verilerinizi dışa aktarma ve silme</h2>
+    <h2>10. Verilerinizi dışa aktarma ve silme</h2>
     <ul>
       <li><strong>Dışa aktarma:</strong> Ayarlar → "Verileri Dışa Aktar" ile tüm kayıtlarınızı JSON olarak indirebilirsiniz.</li>
       <li><strong>Silme:</strong> Ayarlar → "Tüm Verileri Sil" ile cihazınızdaki (ve senkronluysa buluttaki) verilerinizi kaldırabilirsiniz.</li>
       <li><strong>Senkronu durdurma:</strong> Ayarlar → "Eşleştirmeyi Kaldır".</li>
     </ul>
 
-    <h2>10. Çocukların gizliliği</h2>
+    <h2>11. Çocukların gizliliği</h2>
     <p>Uygulama 13 yaşından küçük çocuklara yönelik değildir ve bilerek onlardan veri toplamaz.</p>
 
-    <h2>11. Bu politikadaki değişiklikler</h2>
+    <h2>12. Bu politikadaki değişiklikler</h2>
     <p>Bu gizlilik politikasını zaman zaman güncelleyebiliriz. Değişiklikler bu sayfada yayımlanır ve "Son güncelleme" tarihi buna göre değişir.</p>
 
-    <h2>12. İletişim</h2>
+    <h2>13. İletişim</h2>
     <p>Gizlilikle ilgili sorularınız için: <a href="mailto:suphi.celikoz@gmail.com">suphi.celikoz@gmail.com</a></p>
 
     <footer>
