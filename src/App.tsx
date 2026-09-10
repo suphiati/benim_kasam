@@ -23,7 +23,7 @@ export default function App() {
   const init = useVaultStore((s) => s.init);
   const isInitialized = useVaultStore((s) => s.isInitialized);
   const { isConnected, connect, disconnect } = useFirebaseSync();
-  const { locked, covered, unlock } = useAppLock();
+  const { locked, covered, ready, unlock } = useAppLock();
   const { decision, busy, update, dismiss } = useAppUpdate();
   const { t } = useT();
 
@@ -78,8 +78,11 @@ export default function App() {
           <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
         </>
       )}
-      {/* Açılış kilidi: tüm ekranı kapatan opak katman + biyometri (kasa görünmez) */}
-      {locked && <BiometricLock onUnlock={unlock} />}
+      {/* Açılış kilidi: tüm ekranı kapatan opak katman + biyometri (kasa görünmez).
+          BiometricLock mount olur olmaz biyometri ister; kilit kararı (ayar + cihaz güvenliği)
+          netleşmeden mount edilirse kilit KAPALIYKEN bile sistem istemi açılabiliyordu.
+          Karar gelene kadar yalnızca opak örtü gösterilir (kasa yine bir an bile görünmez). */}
+      {locked && (ready ? <BiometricLock onUnlock={unlock} /> : <PrivacyCover />)}
       {/* Arka plan gizlilik örtüsü: kilit yokken, uygulama arka plandayken kasayı gizler. */}
       {!locked && covered && <PrivacyCover />}
     </>
