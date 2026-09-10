@@ -1,6 +1,14 @@
+import { Capacitor } from '@capacitor/core';
 import { initializeApp, type FirebaseApp } from 'firebase/app';
 import { getDatabase, type Database } from 'firebase/database';
-import { getAuth, signInAnonymously, onAuthStateChanged, type Auth } from 'firebase/auth';
+import {
+  getAuth,
+  initializeAuth,
+  indexedDBLocalPersistence,
+  signInAnonymously,
+  onAuthStateChanged,
+  type Auth,
+} from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -23,7 +31,13 @@ function initFirebase(): boolean {
     try {
       app = initializeApp(firebaseConfig);
       db = getDatabase(app);
-      auth = getAuth(app);
+      // iOS (WKWebView, capacitor:// şeması): getAuth() popup/redirect çözücüsünü de
+      // yükler ve bu ortamda oturum işlemleri hiç sonuçlanmaz (bilinen Capacitor iOS
+      // sorunu). Anonim giriş popup/redirect kullanmadığı için çözücüsüz başlatılır;
+      // kalıcılık getAuth'un ilk tercihiyle aynı (IndexedDB). Android/web'e dokunulmaz.
+      auth = Capacitor.getPlatform() === 'ios'
+        ? initializeAuth(app, { persistence: indexedDBLocalPersistence })
+        : getAuth(app);
     } catch {
       console.warn('Firebase başlatılamadı');
       return false;

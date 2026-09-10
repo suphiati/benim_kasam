@@ -18,6 +18,12 @@ const BANNER_AD_ID = 'ca-app-pub-9692001502823344/6312945256';
 // reklamına tıklayıp politika ihlali riski oluşmaz.
 const IS_TESTING = !import.meta.env.PROD;
 
+// Reklam yalnızca Android'de. iOS derlemesinde AdMob eklentisi hiç bulunmaz
+// (capacitor.config.ts > ios.includePlugins); çağrılsa "not implemented" olurdu.
+function adsSupported(): boolean {
+  return Capacitor.getPlatform() === 'android';
+}
+
 let initPromise: Promise<void> | null = null;
 let bannerCreated = false;
 
@@ -55,16 +61,16 @@ async function doInit(): Promise<void> {
   }
 }
 
-/** AdMob SDK'sını (idempotent) başlatır. Native olmayan platformlarda no-op. */
+/** AdMob SDK'sını (idempotent) başlatır. Android dışındaki platformlarda no-op. */
 export function initAds(): Promise<void> {
-  if (!Capacitor.isNativePlatform()) return Promise.resolve();
+  if (!adsSupported()) return Promise.resolve();
   if (!initPromise) initPromise = doInit();
   return initPromise;
 }
 
 /** Alt banner'ı gösterir (ilk çağrıda oluşturur, sonrakilerde sürdürür). */
 export async function showAppBanner(): Promise<void> {
-  if (!Capacitor.isNativePlatform()) return;
+  if (!adsSupported()) return;
   await initAds();
   try {
     if (!bannerCreated) {
@@ -87,7 +93,7 @@ export async function showAppBanner(): Promise<void> {
 
 /** Banner'ı gizler (kilit ekranı / gizlilik örtüsü sırasında). */
 export async function hideAppBanner(): Promise<void> {
-  if (!Capacitor.isNativePlatform() || !bannerCreated) return;
+  if (!adsSupported() || !bannerCreated) return;
   try {
     await AdMob.hideBanner();
   } catch {

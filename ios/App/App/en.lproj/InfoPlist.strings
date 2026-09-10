@@ -1,0 +1,5 @@
+/* Camera: QR code pairing with another device (Settings > Scan QR) */
+"NSCameraUsageDescription" = "The camera is used to scan a QR code to pair with your vault on another device.";
+
+/* Face ID: app launch lock */
+"NSFaceIDUsageDescription" = "Face ID is used to verify your identity when unlocking your vault.";

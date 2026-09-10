@@ -16,6 +16,10 @@ import { getFirebaseDb } from '../config/firebase';
  *  - Play Store yönlendirme: native in-app update mümkün değilse son çare (openAppStore).
  *
  * Karar sırası: ZORUNLU (Firebase min) > OPSİYONEL (Play veya Firebase latest) > yok.
+ *
+ * iOS: Firebase eşikleri Android versionCode'larıdır, iOS build numarasıyla KARŞILAŞTIRILMAZ
+ * (yoksa iOS'ta sürekli sahte "güncelleme var" çıkar). iOS'ta yalnızca App Store'daki sürüm
+ * cihazdakinden yeniyse OPSİYONEL şerit gösterilir; güncelleme App Store sayfasından yapılır.
  */
 export type UpdateDecision =
   | { kind: 'none' }
@@ -26,6 +30,10 @@ interface RemoteConfig {
   minVersionCode: number;
   latestVersionCode: number;
 }
+
+// App Store'daki sayısal Apple kimliği (App Store Connect > Uygulama Bilgileri > Apple Kimliği).
+// iOS'ta openAppStore bunu zorunlu ister; boşken iOS güncelleme kontrolü kapalı kalır.
+const APP_STORE_ID = '';
 
 // config `.read: true` (auth gerektirmez): açılışta anonim oturumu beklemeden okunur.
 async function getRemoteConfig(): Promise<RemoteConfig | null> {
@@ -50,17 +58,27 @@ async function getNativeInfo(): Promise<NativeInfo | null> {
   try {
     return await AppUpdate.getAppUpdateInfo();
   } catch {
-    // Play Store yok (sideload/emülatör), ağ hatası vb. → native güncelleme kanalı pasif
+    // Mağaza yok (sideload/emülatör), uygulama henüz yayında değil, ağ hatası vb. → pasif
     return null;
   }
 }
 
+// iOS: eklenti App Store kaydını (iTunes lookup) cihazdaki sürüm adıyla karşılaştırır.
+async function checkAppStore(): Promise<UpdateDecision> {
+  if (!APP_STORE_ID) return { kind: 'none' };
+  const info = await getNativeInfo();
+  return info?.updateAvailability === AppUpdateAvailability.UPDATE_AVAILABLE
+    ? { kind: 'optional', canFlexible: false }
+    : { kind: 'none' };
+}
+
 /**
  * Güncelleme durumunu değerlendirir. Web/PWA'da her zaman 'none' (SW autoUpdate zaten var).
- * Native'de: mevcut versionCode'u Play'den (yoksa 0), eşikleri Firebase'den alır.
+ * Android'de: mevcut versionCode'u Play'den (yoksa 0), eşikleri Firebase'den alır.
  */
 export async function checkForUpdate(): Promise<UpdateDecision> {
   if (!Capacitor.isNativePlatform()) return { kind: 'none' };
+  if (Capacitor.getPlatform() === 'ios') return checkAppStore();
 
   const [info, remote] = await Promise.all([getNativeInfo(), getRemoteConfig()]);
 
@@ -83,10 +101,12 @@ export async function checkForUpdate(): Promise<UpdateDecision> {
   return { kind: 'none' };
 }
 
-/** Play Store uygulama sayfasını açar (son çare / native update mümkün değilken). */
+/** Mağaza sayfasını açar: Android'de Play Store, iOS'ta App Store (son çare yönlendirme). */
 export async function openStore(): Promise<void> {
   try {
-    await AppUpdate.openAppStore();
+    await AppUpdate.openAppStore(
+      Capacitor.getPlatform() === 'ios' ? { appId: APP_STORE_ID } : undefined,
+    );
   } catch {
     /* yok say */
   }
@@ -110,7 +130,7 @@ export async function runForcedUpdate(canImmediate: boolean): Promise<void> {
 
 /**
  * OPSİYONEL güncelleme: mümkünse native flexible update (arka planda indir + yeniden başlat),
- * değilse Play Store yönlendirme. Kullanıcı iptal ederse sessizce döner.
+ * değilse mağaza yönlendirme (iOS'ta her zaman App Store). Kullanıcı iptal ederse sessizce döner.
  */
 export async function runOptionalUpdate(canFlexible: boolean): Promise<void> {
   if (canFlexible) {

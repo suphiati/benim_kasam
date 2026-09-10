@@ -1,0 +1,5 @@
+/* Kamera: başka bir cihazla QR kod eşleştirmesi (Ayarlar > QR Oku) */
+"NSCameraUsageDescription" = "Başka bir cihazdaki kasanızla eşleşmek için QR kodu okumak üzere kamera kullanılır.";
+
+/* Face ID: uygulama açılış kilidi */
+"NSFaceIDUsageDescription" = "Kasanızı açarken kimliğinizi doğrulamak için Face ID kullanılır.";

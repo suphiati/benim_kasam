@@ -1,0 +1,182 @@
+# ─────────────────────────────────────────────────────────────────────────
+# iOS derleme hattı (Capacitor → App Store Connect / TestFlight).
+#
+# Windows'ta geliştirildiği için Mac gerektirmez: GitHub'ın macOS runner'ında derlenir
+# (repo herkese açık → macOS dakikaları ücretsiz). Apple 28 Nisan 2026'dan beri
+# yüklemelerde Xcode 26 / iOS 26 SDK şartı arıyor → macos-26 (varsayılan Xcode 26.x).
+#
+#   smoke   : Simülatör derlemesi + açılış duman testi + ekran görüntüsü. Her push'ta.
+#             (src/smokeTest.ts: Firebase anonim oturum, RTDB okuma, native köprü)
+#   release : İmzalı IPA → App Store Connect'e yükleme. YALNIZCA elle tetiklenince
+#             (Actions → iOS → Run workflow → "upload" işaretli).
+#
+# İMZALAMA: codemagic-cli-tools (açık kaynak; Codemagic hesabı GEREKMEZ). Sabit bir RSA
+# anahtarıyla (CERTIFICATE_PRIVATE_KEY) App Store Connect API üzerinden Apple Distribution
+# sertifikasını ilk çalıştırmada oluşturur, sonrakilerde AYNI sertifikayı bulup kullanır;
+# App Store provisioning profilini de kendisi çeker. Böylece her geçici runner'da yeni
+# sertifika üretilmez (hesap başına dağıtım sertifikası sınırı var). xcodebuild'in bulut
+# imzalaması arşiv adımında makinede geliştirme sertifikası istediği için kullanılmadı.
+#
+# GEREKLİ GITHUB SECRETS (repo → Settings → Secrets and variables → Actions):
+#   VITE_FIREBASE_*, VITE_API_BASE_URL  → .env ile aynı değerler (gh secret set -f .env)
+#   APPSTORE_API_KEY_ID, APPSTORE_API_ISSUER_ID, APPSTORE_API_KEY_P8 (.p8 dosyasının içeriği)
+#   CERTIFICATE_PRIVATE_KEY  → dağıtım sertifikasının RSA 2048 özel anahtarı (PEM)
+#
+# Build numarası: run_number.run_attempt (her yükleme benzersiz ve artan).
+# Sürüm adı: package.json "version" — Android ile tek kaynak.
+# ─────────────────────────────────────────────────────────────────────────
+name: iOS
+
+on:
+  push:
+    branches: [main, ios-app-store]
+    paths:
+      - 'src/**'
+      - 'ios/**'
+      - 'public/**'
+      - 'index.html'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'capacitor.config.ts'
+      - 'vite.config.ts'
+      - '.github/workflows/ios.yml'
+  workflow_dispatch:
+    inputs:
+      upload:
+        description: "App Store Connect'e yükle (TestFlight)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash # -eo pipefail: "xcodebuild | xcbeautify" hatayı yutmasın
+
+env:
+  BUNDLE_ID: com.suphiatilim.benimkasam
+  # Web derlemesine gömülen yapılandırma (.env ile aynı; web paketinde zaten herkese açık).
+  VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+  VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+  VITE_FIREBASE_DATABASE_URL: ${{ secrets.VITE_FIREBASE_DATABASE_URL }}
+  VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+  VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+  VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+  VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+  VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+
+jobs:
+  smoke:
+    name: Simülatör duman testi
+    runs-on: macos-26
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - name: Web derlemesi (duman testi açık)
+        run: npm run build
+        env:
+          VITE_SMOKE_TEST: '1'
+      - run: npx cap sync ios
+
+      - name: Simülatör derlemesi (Debug, imzasız)
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/dd" CODE_SIGNING_ALLOWED=NO build \
+            | { if command -v xcbeautify >/dev/null; then xcbeautify; else cat; fi; }
+
+      - name: Simülatörde aç, duman testi, ekran görüntüsü
+        run: |
+          UDID=$(xcrun simctl list devices available -j | node -e '
+            const devices = JSON.parse(require("fs").readFileSync(0, "utf8")).devices;
+            const iphones = Object.entries(devices)
+              .filter(([runtime]) => runtime.includes("iOS"))
+              .flatMap(([, list]) => list)
+              .filter((d) => d.name.startsWith("iPhone"));
+            const pick = iphones.filter((d) => /Pro Max/.test(d.name)).pop() || iphones.pop();
+            process.stdout.write(pick.udid);
+          ')
+          xcrun simctl list devices | grep "$UDID"
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl install "$UDID" "$RUNNER_TEMP/dd/Build/Products/Debug-iphonesimulator/App.app"
+          xcrun simctl launch --console "$UDID" "$BUNDLE_ID" > smoke.log 2>&1 &
+          for _ in $(seq 1 60); do grep -q '\[smoke\] done' smoke.log && break; sleep 2; done
+          sleep 5 # Header'daki "Piyasa: ..." satırı kur verisiyle dolsun
+          xcrun simctl io "$UDID" screenshot smoke-iphone.png
+          echo "──── uygulama çıktısı ────"; cat smoke.log
+          grep -q '\[smoke\] done' smoke.log || { echo "::error::Duman testi tamamlanmadı (uygulama açılmadı ya da JS çalışmadı)"; exit 1; }
+          if [ -z "$VITE_FIREBASE_DATABASE_URL" ]; then
+            echo "::warning::Firebase secret'ları tanımlı değil — oturum/veritabanı kontrolleri atlandı"
+            exit 0
+          fi
+          grep -q '\[smoke\] auth=ok' smoke.log || { echo "::error::Firebase anonim oturum iOS'ta başarısız"; exit 1; }
+          grep -q '\[smoke\] db=ok' smoke.log || { echo "::error::Firebase RTDB okuması iOS'ta başarısız"; exit 1; }
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios-smoke
+          path: |
+            smoke-iphone.png
+            smoke.log
+          if-no-files-found: ignore
+
+  release:
+    name: İmzala ve App Store Connect'e yükle
+    needs: smoke
+    if: github.event_name == 'workflow_dispatch' && inputs.upload
+    runs-on: macos-26
+    timeout-minutes: 60
+    env:
+      APP_STORE_CONNECT_KEY_IDENTIFIER: ${{ secrets.APPSTORE_API_KEY_ID }}
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APPSTORE_API_ISSUER_ID }}
+      APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APPSTORE_API_KEY_P8 }}
+      CERTIFICATE_PRIVATE_KEY: ${{ secrets.CERTIFICATE_PRIVATE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm ci
+      - run: pip install codemagic-cli-tools
+
+      - name: Web derlemesi (production)
+        run: npm run build
+      - run: npx cap sync ios
+
+      - name: İmzalama dosyaları (dağıtım sertifikası + App Store profili)
+        run: |
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --certificate-key=@env:CERTIFICATE_PRIVATE_KEY \
+            --create
+          keychain add-certificates
+          xcode-project use-profiles --project ios/App/App.xcodeproj
+
+      - name: IPA derle
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          BUILD="${{ github.run_number }}.${{ github.run_attempt }}"
+          echo "BenimKasam iOS $VERSION ($BUILD)"
+          xcode-project build-ipa \
+            --project ios/App/App.xcodeproj \
+            --scheme App \
+            --config Release \
+            --archive-xcargs "MARKETING_VERSION=$VERSION CURRENT_PROJECT_VERSION=$BUILD COMPILER_INDEX_STORE_ENABLE=NO"
+
+      - name: App Store Connect'e yükle
+        run: app-store-connect publish --path 'build/ios/ipa/*.ipa'
