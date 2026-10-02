@@ -6,7 +6,8 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  // android/ios: Capacitor'un ürettiği/kopyaladığı JS; .claude: worktree kopyaları
+  globalIgnores(['dist', 'android', 'ios', '.claude']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [

@@ -25,10 +25,8 @@ export function InstallGuide() {
   const { isIOS, isAndroid, isSamsung, isStandalone } = getDeviceInfo();
 
   useEffect(() => {
-    if (isStandalone) {
-      setInstalled(true);
-      return;
-    }
+    // Zaten yüklü (standalone): dinleyiciye gerek yok, aşağıdaki render null döner.
+    if (isStandalone) return;
 
     const handler = (e: Event) => {
       e.preventDefault();
@@ -49,7 +47,7 @@ export function InstallGuide() {
   if (Capacitor.isNativePlatform()) return null;
 
   // Zaten yüklü veya kapatıldı
-  if (installed || dismissed) return null;
+  if (installed || isStandalone || dismissed) return null;
 
   const handleInstall = async () => {
     if (!deferredPrompt) return;
