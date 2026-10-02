@@ -28,8 +28,12 @@ dist-ssr
 *.sln
 *.sw?
 
-# Claude Code (araç konfigürasyonu, worktree kopyaları, yerel ayarlar)
-.claude/
+# Claude Code: yerel ayarlar ve worktree kopyaları yok sayılır;
+# proje talimatları (factory-project.md, agents/, skills/) versiyonlanır.
+.claude/*
+!.claude/factory-project.md
+!.claude/agents/
+!.claude/skills/
 
 # Android imzalama sırları — ASLA commit'lenmez.
 # Keystore'u kaybedersen Play App Signing'den upload key'i sıfırlayabilirsin.
