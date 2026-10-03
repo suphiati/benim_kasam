@@ -24,6 +24,7 @@ function cspMeta(apiBase?: string): string {
     'https://finans.truncgil.com',
     'https://api.genelpara.com',
     'https://api.exchangerate-api.com',
+    'https://api.frankfurter.dev', // fxHistoryService: geçmiş tarihli işlemlerin USD/EUR kuru
     'https://*.firebaseio.com',
     'https://*.firebasedatabase.app',
     'wss://*.firebaseio.com',
