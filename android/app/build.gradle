@@ -40,8 +40,11 @@ android {
             applicationIdSuffix ".test"
         }
         release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // R8 (küçültme + karartma): Play "DEX kodu optimizasyonu eşiğin altında" uyarısı.
+            // Eklenti sınıflarını Capacitor'un tüketici kuralları, JS köprüsünü
+            // (@JavascriptInterface) varsayılan optimize dosyası korur.
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             if (keystorePropsFile.exists()) {
                 signingConfig signingConfigs.release
             }
