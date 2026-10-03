@@ -88,6 +88,10 @@ export function QrGenerateModal({ onClose, onConnect }: QrGenerateModalProps) {
           stopWatch = syncService.watchPeerJoin(id, () => {
             if (cancelled) return;
             commit();
+            // Eşleşme tamam: pencereyi kapat, QR'ın fotoğrafıyla sonradan katılım olmasın.
+            if (refresh) clearInterval(refresh);
+            refresh = null;
+            syncService.closeInviteWindow(id);
             setStatus('paired');
           });
         } else {
@@ -106,6 +110,8 @@ export function QrGenerateModal({ onClose, onConnect }: QrGenerateModalProps) {
       cancelled = true;
       if (refresh) clearInterval(refresh);
       stopWatch?.();
+      // QR ekranı kapandı: yeni katılım kabul edilmesin (kasa aşağıda silinse de zararsız).
+      syncService.closeInviteWindow(id);
       // Kimse okumadıysa geriye sahipsiz kasa BIRAKMA. Eskiden ekran açılır açılmaz
       // vaultId localStorage'a yazıldığı için, QR'ı kimseye okutmadan kapatan cihaz
       // kendi kendine "senkronize" görünmeye devam ediyordu.

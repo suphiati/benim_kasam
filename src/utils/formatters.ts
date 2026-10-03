@@ -110,3 +110,11 @@ export function todayISO(): string {
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
+
+/**
+ * Kayıtta saklanabilir 'YYYY-MM-DD' mi? Ay/gün/yıl 0 olursa formatDate new Date(dateStr)'e
+ * düşer, Invalid Date Intl.format'ta fırlatır ve satır her açılışta listeyi çökertir.
+ */
+export function isISODate(value: unknown): value is string {
+  return typeof value === 'string' && /^(?!0000)\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(value);
+}

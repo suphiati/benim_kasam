@@ -3,7 +3,7 @@ import type { AssetType, Transaction, TransactionType } from '../../types';
 import { useVaultStore } from '../../store/vaultStore';
 import { AssetTypePicker } from './AssetTypePicker';
 import { ASSET_TYPES } from '../../constants/assets';
-import { formatCurrency, todayISO } from '../../utils/formatters';
+import { formatCurrency, isISODate, todayISO } from '../../utils/formatters';
 import { getFxToday, toBase, CURRENCY_META } from '../../utils/currency';
 import { useT } from '../../hooks/useT';
 import { Save, ArrowDownCircle, ArrowUpCircle, Eraser } from 'lucide-react';
@@ -154,7 +154,8 @@ export function TransactionForm({ editingTransaction, onSaved }: TransactionForm
     }
   };
 
-  const isValid = assetType && parseFloat(amount) > 0 && parseFloat(unitPrice) > 0;
+  // Tarih alanı temizlenebiliyor: boş/bozuk tarihli kayıt listede çöker, diğer cihazlar da almaz.
+  const isValid = assetType && isISODate(date) && parseFloat(amount) > 0 && parseFloat(unitPrice) > 0;
 
   // "Temizle": kullanıcının girdiği her şeyi sıfırla + taslağı sil. Yalnız ekleme modunda.
   const handleClear = () => {

@@ -6,7 +6,7 @@ import { fetchLiveRates } from '../services/rateService';
 import { syncService, isSyncableId } from '../services/firebaseSyncService';
 import { getFxForDate } from '../services/fxHistoryService';
 import { getFxToday } from '../utils/currency';
-import { todayISO } from '../utils/formatters';
+import { isISODate, todayISO } from '../utils/formatters';
 import { detectLang, type Lang } from '../i18n';
 
 const BASE_CURRENCY_KEY = 'benimkasam_base_currency';
@@ -237,7 +237,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
       const tx = item as Partial<Transaction>;
       if (typeof tx.id !== 'string' || !isSyncableId(tx.id)) continue; // id senkronda yol parçası olur
       if (typeof tx.assetType !== 'string' || !(ASSET_TYPES as string[]).includes(tx.assetType)) continue;
-      if (typeof tx.date !== 'string') continue;
+      if (!isISODate(tx.date)) continue; // bozuk tarih listede çöker, senkronda diğer cihazlar almaz
       // isFinite: JSON'da 1e999 = Infinity, ">= 0" testini geçer ve toplamları bozardı.
       if (typeof tx.amount !== 'number' || !Number.isFinite(tx.amount) || tx.amount < 0) continue;
       if (typeof tx.unitPrice !== 'number' || !Number.isFinite(tx.unitPrice) || tx.unitPrice < 0) continue;

@@ -3,6 +3,8 @@ import {
   type Unsubscribe, type Database, type DataSnapshot,
 } from 'firebase/database';
 import { getFirebaseDb, ensureAuth, getCurrentUid } from '../config/firebase';
+import { ASSET_TYPES } from '../constants/assets';
+import { isISODate } from '../utils/formatters';
 import type { FxSnapshot, Transaction } from '../types';
 
 const VAULT_ID_KEY = 'benim_kasam_vault_id';
@@ -94,7 +96,7 @@ interface FirebaseTransaction {
 
 function toFirebase(tx: Transaction): FirebaseTransaction {
   const data: FirebaseTransaction = {
-    type: tx.type,
+    type: tx.type ?? 'buy', // eski kayıtlarda tip yok (alım sayılır); undefined set()'i fırlatırdı
     assetType: tx.assetType,
     date: tx.date,
     amount: tx.amount,
@@ -104,6 +106,20 @@ function toFirebase(tx: Transaction): FirebaseTransaction {
   if (tx.note) data.note = tx.note;
   if (tx.fxSnapshot) data.fxSnapshot = tx.fxSnapshot; // RTDB undefined kabul etmez
   return data;
+}
+
+/**
+ * Başka cihazdan gelen kayıt uygulanabilir mi? Kurallar yalnızca "metin" diye bakıyor:
+ * bilinmeyen varlık türü ya da bozuk tarih kart çiziminde fırlatır, IndexedDB'ye yazıldığı
+ * için her açılışta tekrarlar. Geçersiz kayıt yok sayılır (uygulanmaz, tabana da girmez).
+ * Tipsiz eski kayıtlar alım sayılır (yerel hesaplamayla aynı).
+ */
+function isValidRemote(data: FirebaseTransaction): boolean {
+  return (data.type === undefined || data.type === 'buy' || data.type === 'sell')
+    && (ASSET_TYPES as string[]).includes(data.assetType)
+    && isISODate(data.date)
+    && Number.isFinite(data.amount) && data.amount >= 0
+    && Number.isFinite(data.unitPrice) && data.unitPrice >= 0;
 }
 
 function fromFirebase(data: FirebaseTransaction, id: string): Transaction {
@@ -240,15 +256,11 @@ class FirebaseSyncService {
   }
 
   /**
-   * Bu cihazın anonim UID'sini kasanın üye listesine yazar (Faz-1).
+   * Bu cihazın anonim UID'sini kasanın üye listesine yazar.
    *
-   * Şu an kurallar hâlâ `auth != null`, yani bu yazım kimseyi etkilemez ve hiçbir
-   * mevcut akışı bozmaz; amacı üyelik verisini TOPLAMAYA başlamaktır. İleride kurallar
-   * "yalnızca üye okur/yazar" kilidine (Faz-2) geçirildiğinde, o güne kadar bağlanmış
-   * tüm gerçek cihazlar zaten kayıtlı olacağı için geçiş sorunsuz olur.
-   *
-   * Hata (ör. eski kural sürümü members'ı reddederse) sessizce yutulur: senkronun
-   * kendisi bundan bağımsız çalışmaya devam eder.
+   * Kurallar kasayı yalnızca üyelere açar: üye olmayan cihaz kendini ancak hiç var olmayan
+   * yeni kasaya ya da davet penceresi açıkken ekleyebilir. Ret sessizce yutulur; ardından
+   * okuma reddedilir ve onBlocked arayüze "bağlı değil" gösterir.
    */
   private async registerMember(db: Database, vaultId: string): Promise<void> {
     const uid = getCurrentUid();
@@ -275,23 +287,32 @@ class FirebaseSyncService {
   }
 
   /**
-   * Bu cihazın üyelik kaydını kasadan siler (eşleştirmeyi kaldırma).
+   * Bu cihazın üyelik kaydını kasadan siler (eşleştirmeyi kaldırma); son üyeyse kasayı siler.
    *
    * Yalnız yerelde vaultId silmek yetmiyordu: cihaz Firebase'de members altında
    * kayıtlı kalıyor, yani "senkronize cihaz" olarak görünmeye devam ediyordu.
    * Sunucudaki iz de temizlenmeli. Hata sessizce yutulur - yerel kopma yine olur.
+   * Çağıran önce forget() çalıştırmış olmalı (clearVaultId / connect): kuyrukta bu kasaya
+   * ait işlem kalıp silinen kasaya yeniden yazılmasın.
    */
   async leaveVault(vaultId?: string): Promise<void> {
     const id = vaultId ?? this.vaultId ?? localStorage.getItem(VAULT_ID_KEY);
-    if (!id) return;
+    // Şu an bağlı olunan kasadan asla çıkma/silme: eski bir pendingLeave ya da çevrimdışı
+    // bekleyen çıkış, kullanıcı aynı kasaya yeniden eşleştikten sonra çalışabilir.
+    if (!id || this.getVaultId() === id) return;
     try {
       const ok = await ensureAuth();
       const db = getFirebaseDb();
       const uid = getCurrentUid();
       if (!ok || !db || !uid) return;
-      await remove(ref(db, `vaults/${id}/members/${uid}`));
+      // Son üye çıkıyorsa kasayı tümden sil: üyesiz kalan veriye kurallar gereği kimse erişemez,
+      // sunucuda sahipsiz kalmasın. Başka üye varsa yalnızca kendi kaydını sil.
+      const hasPeer = await this.hasPeerMember(id);
+      if (this.getVaultId() === id) return; // beklerken aynı kasaya yeniden eşleşildi
+      if (hasPeer) await remove(ref(db, `vaults/${id}/members/${uid}`));
+      else await remove(ref(db, `vaults/${id}`));
     } catch {
-      // Ağ/kural hatası: yerel kopma yeterli, sunucu kaydı sonraki denemede silinir.
+      // Ağ/kural hatası: yerel kopma yine olur; sunucudaki kayıt kalır (yeniden denenmez).
     }
   }
 
@@ -357,17 +378,27 @@ class FirebaseSyncService {
    * cihaz, henüz üye olmasa da kendini members'a yazabilir; pencere kapanınca kasaya
    * yalnızca mevcut üyeler erişir. Yalnızca zaten üye olan (QR üreten) cihaz pencereyi
    * açabilir - saldırgan vaultId'yi bilse bile pencereyi kendisi açamaz.
-   *
-   * Faz-1'de (kural henüz yalnız-üye değil) bu yazım işlevsel olarak etkisizdir ama
-   * zararsızdır; kilit kuralı deploy edildiğinde otomatik olarak devreye girer.
    */
   openInviteWindow(vaultId?: string): void {
     ensureAuth().then((ok) => {
       const db = getFirebaseDb();
       const id = vaultId ?? this.vaultId;
       if (!ok || !db || !id) return;
-      const until = Date.now() + FirebaseSyncService.INVITE_WINDOW_MS;
-      set(ref(db, `vaults/${id}/openUntil`), until).catch(() => {});
+      // Kural sunucu saatiyle (now) karşılaştırır: cihaz saati 15 dk geri olsa pencere hiç
+      // açılmazdı. Sunucu farkı SDK'da hazır (bağlantı kurulunca hesaplanır).
+      onValue(ref(db, '.info/serverTimeOffset'), (snap) => {
+        const until = Date.now() + (Number(snap.val()) || 0) + FirebaseSyncService.INVITE_WINDOW_MS;
+        set(ref(db, `vaults/${id}/openUntil`), until).catch(() => {});
+      }, { onlyOnce: true });
+    });
+  }
+
+  /** Davet penceresini kapatır: eşleşme bittiğinde ya da QR ekranı kapanınca kimse katılamasın. */
+  closeInviteWindow(vaultId: string): void {
+    ensureAuth().then((ok) => {
+      const db = getFirebaseDb();
+      if (!ok || !db) return;
+      remove(ref(db, `vaults/${vaultId}/openUntil`)).catch(() => {});
     });
   }
 
@@ -378,6 +409,7 @@ class FirebaseSyncService {
     // onay anında gelen başka değişiklik) şimdi uygulanmaz, gölgeye yazılır; ack'te uygulanır.
     const onServerState = (id: string | null, data: FirebaseTransaction | null) => {
       if (!id) return;
+      if (data && !isValidRemote(data)) return; // bkz. isValidRemote: yerel kopya korunur
       if (this.outbox.has(id)) {
         this.shadow.set(id, data);
         return;
@@ -418,7 +450,9 @@ class FirebaseSyncService {
       if (known.has(tx.id)) this.handlers?.onRemoteChange('removed', tx); // başka cihaz silmiş
       else this.enqueue(tx.id, 'put', tx); // sunucuya hiç ulaşmamış
     }
-    this.known = new Set(Object.keys(remote).filter((id) => !this.outbox.has(id)));
+    // Kabul etmediğimiz kayıt tabana girmez: sonra sunucudan kalkarsa yerel kopya "silinmiş"
+    // sayılmasın, yeniden yüklensin (veri kaybı yerine birleşim).
+    this.known = new Set(Object.keys(remote).filter((id) => !this.outbox.has(id) && isValidRemote(remote[id])));
     if (this.knownVaultId) saveKnown(this.knownVaultId, this.known);
     if (this.pendingLeave) {
       void this.leaveVault(this.pendingLeave);
