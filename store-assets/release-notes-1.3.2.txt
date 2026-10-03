@@ -1,0 +1,22 @@
+BenimKasam 1.3.2 (versionCode 18) — Sürüm Notları
+=================================================
+
+--- Türkçe (tr-TR) ---
+Bu sürümde:
+• Cihazlar arası senkronizasyon daha güvenilir hale getirildi.
+• Bağlantı yokken eklediğiniz kayıtlar, bağlantı geldiğinde diğer cihazlarınıza otomatik olarak aktarılıyor.
+• Döviz ve altın kurları her açılışta güncel olarak yükleniyor.
+• Kasanızın güvenliği güçlendirildi; verilerinize yalnızca eşleştirdiğiniz cihazlar erişebiliyor.
+Görüş ve önerileriniz bizim için değerli.
+
+--- English (en-US) ---
+What's new:
+• More reliable syncing between your devices.
+• Entries you add while offline are sent to your other devices automatically once you're back online.
+• Currency and gold rates now load up to date every time.
+• Stronger vault security: only the devices you pair can access your data.
+We'd love to hear your feedback.
+
+--- Dahili not (mağaza metnine yazılmaz) ---
+• Güncellemeden sonraki ilk açılışta (ve her eşleştirme kaldırılıp yeniden eşleştirildiğinde), bir cihaz kapalıyken diğerinde silinen kayıtlar bir kez yeniden görünebilir; veri kaybı yoktur, tekrar silinebilir.
+• Kasa kilidinden önce üyeliği kaydedilmemiş eşli cihazlar "Bağlantı yok" görür; yeniden eşleştirmek yeterlidir.
