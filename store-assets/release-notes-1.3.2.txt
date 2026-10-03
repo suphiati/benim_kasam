@@ -7,6 +7,7 @@ Bu sürümde:
 • Bağlantı yokken eklediğiniz kayıtlar, bağlantı geldiğinde diğer cihazlarınıza otomatik olarak aktarılıyor.
 • Döviz ve altın kurları her açılışta güncel olarak yükleniyor.
 • Kasanızın güvenliği güçlendirildi; verilerinize yalnızca eşleştirdiğiniz cihazlar erişebiliyor.
+• İlk açılışta, diğer cihazınızda silinen bazı kayıtlar bir kez yeniden görünebilir; tekrar silebilirsiniz.
 Görüş ve önerileriniz bizim için değerli.
 
 --- English (en-US) ---
@@ -15,6 +16,7 @@ What's new:
 • Entries you add while offline are sent to your other devices automatically once you're back online.
 • Currency and gold rates now load up to date every time.
 • Stronger vault security: only the devices you pair can access your data.
+• On first launch, some entries deleted on your other device may reappear once; you can delete them again.
 We'd love to hear your feedback.
 
 --- Dahili not (mağaza metnine yazılmaz) ---
