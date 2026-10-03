@@ -1,39 +1,36 @@
-import { useEffect, useState, useCallback } from 'react';
-import { syncService, type RemoteChangeType } from '../services/firebaseSyncService';
+import { useEffect, useState, useCallback, useMemo } from 'react';
+import { syncService, type SyncHandlers } from '../services/firebaseSyncService';
 import { useVaultStore } from '../store/vaultStore';
-import type { Transaction } from '../types';
+
+// Bu kadar arka planda kalınca dönüşte bağlantı tazelenir (kısa geçişlerde gereksiz kopma olmasın).
+const RESUME_RECONNECT_MS = 30 * 1000;
 
 export function useFirebaseSync() {
-  const [isConnected, setIsConnected] = useState(false);
-  const [vaultId, setVaultIdState] = useState<string | null>(null);
-  const applyRemoteAdd = useVaultStore((s) => s.applyRemoteAdd);
+  // Kayıtlı kasa varsa yerel veri yüklenince bağlanılacak: rozet ilk karede doğru görünsün.
+  const [isConnected, setIsConnected] = useState(() => syncService.getVaultId() !== null);
+  const isInitialized = useVaultStore((s) => s.isInitialized);
   const applyRemoteUpdate = useVaultStore((s) => s.applyRemoteUpdate);
   const applyRemoteDelete = useVaultStore((s) => s.applyRemoteDelete);
 
-  const handleRemoteChange = useCallback(
-    (type: RemoteChangeType, tx: Transaction) => {
-      switch (type) {
-        case 'added':
-          applyRemoteAdd(tx);
-          break;
-        case 'changed':
-          applyRemoteUpdate(tx);
-          break;
-        case 'removed':
-          applyRemoteDelete(tx.id);
-          break;
-      }
-    },
-    [applyRemoteAdd, applyRemoteUpdate, applyRemoteDelete],
+  const handlers = useMemo<SyncHandlers>(
+    () => ({
+      onRemoteChange: (type, tx) => {
+        if (type === 'removed') applyRemoteDelete(tx.id);
+        else applyRemoteUpdate(tx); // added/changed: upsert
+      },
+      getLocal: () => useVaultStore.getState().transactions,
+      onBlocked: () => setIsConnected(false),
+    }),
+    [applyRemoteUpdate, applyRemoteDelete],
   );
 
+  // QR ile katılım (üreten ya da okuyan taraf).
   const connect = useCallback(
     (id: string) => {
-      syncService.connect(id, handleRemoteChange);
-      setVaultIdState(id);
+      syncService.connect(id, handlers);
       setIsConnected(true);
     },
-    [handleRemoteChange],
+    [handlers],
   );
 
   const disconnect = useCallback(() => {
@@ -43,21 +40,30 @@ export function useFirebaseSync() {
     const id = syncService.getVaultId();
     syncService.disconnect();
     syncService.clearVaultId();
-    setVaultIdState(null);
     setIsConnected(false);
     if (id) void syncService.leaveVault(id);
   }, []);
 
-  // Auto-connect on mount if vault ID exists
+  // Kayıtlı kasaya otomatik bağlan - ama yerel veri yüklendikten SONRA: uzlaştırma yereldeki
+  // kayıtlara bakarak karar verir, boş liste görürse hiçbir şeyi yükleyemez.
   useEffect(() => {
+    if (!isInitialized) return;
     const existingVaultId = syncService.getVaultId();
-    if (existingVaultId) {
-      connect(existingVaultId);
-    }
+    if (existingVaultId) syncService.connect(existingVaultId, handlers);
     return () => {
       syncService.disconnect();
     };
-  }, [connect]);
+  }, [isInitialized, handlers]);
 
-  return { isConnected, vaultId, connect, disconnect };
+  useEffect(() => {
+    let hiddenAt = 0;
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') hiddenAt = Date.now();
+      else if (hiddenAt && Date.now() - hiddenAt >= RESUME_RECONNECT_MS) syncService.reconnect();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, []);
+
+  return { isConnected, connect, disconnect };
 }

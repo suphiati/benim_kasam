@@ -68,7 +68,9 @@ export function QrGenerateModal({ onClose, onConnect }: QrGenerateModalProps) {
           (async () => {
             const ok = await syncService.joinVault(id);
             if (!ok) throw new Error('sync-unavailable');
-            await syncService.uploadAllTransactions(transactions, id);
+            // Yalnızca yeni kasada toplu yükleme: eşleşmiş cihaz zaten senkron kuyruğundan gider.
+            // Toplu yazım reddedilirse SDK'nın geri alması kuyrukta olmayan kayıtları yerelde sildirebilirdi.
+            if (isFresh) await syncService.uploadAllTransactions(transactions, id);
           })(),
           PREPARE_TIMEOUT_MS,
         );

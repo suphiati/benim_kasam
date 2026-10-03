@@ -3,7 +3,7 @@ import type { Transaction, LiveRate, BaseCurrency, AssetType, TransactionType } 
 import { ASSET_TYPES } from '../constants/assets';
 import * as db from '../db/indexedDb';
 import { fetchLiveRates } from '../services/rateService';
-import { syncService } from '../services/firebaseSyncService';
+import { syncService, isSyncableId } from '../services/firebaseSyncService';
 import { getFxForDate } from '../services/fxHistoryService';
 import { getFxToday } from '../utils/currency';
 import { todayISO } from '../utils/formatters';
@@ -73,7 +73,6 @@ interface VaultState {
   backfillFxSnapshots: () => Promise<void>;
   exportData: () => string;
   importData: (json: string) => Promise<void>;
-  applyRemoteAdd: (tx: Transaction) => Promise<void>;
   applyRemoteUpdate: (tx: Transaction) => Promise<void>;
   applyRemoteDelete: (id: string) => Promise<void>;
 }
@@ -189,29 +188,30 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     const pending = get().transactions.filter((t) => !t.fxSnapshot);
     if (pending.length === 0) return;
 
-    const byDate = new Map<string, Transaction[]>();
+    const byDate = new Map<string, string[]>();
     for (const t of pending) {
-      const list = byDate.get(t.date) ?? [];
-      list.push(t);
-      byDate.set(t.date, list);
+      byDate.set(t.date, [...(byDate.get(t.date) ?? []), t.id]);
     }
 
     const today = todayISO();
-    const resolved: Transaction[] = [];
-    for (const [date, txs] of byDate) {
+    for (const [date, ids] of byDate) {
       // Bugün için canlı kur (Kapalıçarşı alış) ECB'ye tercih edilir - değerlemeyle aynı kaynak.
       const fx = (date === today ? getFxToday(get().liveRates) : null) ?? (await getFxForDate(date));
       if (!fx) continue;
-      for (const t of txs) resolved.push({ ...t, fxSnapshot: fx });
+      // Kur beklenirken kayıt başka cihazdan silinmiş/düzenlenmiş olabilir: ağdan ÖNCEKİ kopyayı
+      // yazmak silineni geri getirir, düzenlemeyi ezerdi. Güncel hâli damgala.
+      const stamped = ids
+        .map((id) => get().transactions.find((t) => t.id === id))
+        .filter((t): t is Transaction => !!t && !t.fxSnapshot && t.date === date)
+        .map((t) => ({ ...t, fxSnapshot: fx }));
+      if (stamped.length === 0) continue;
+      const byId = new Map(stamped.map((t) => [t.id, t]));
+      set((s) => ({ transactions: s.transactions.map((t) => byId.get(t.id) ?? t) }));
+      // Hepsini await'ten ÖNCE kuyruğa al: kuyruktaki id'ye gelen uzak olay bekletilir, araya
+      // giren düzenleme bu eski kopyayla ezilmez.
+      for (const t of stamped) syncService.pushTransactionUpdate(t);
+      for (const t of stamped) await db.updateTransaction(t);
     }
-    if (resolved.length === 0) return;
-
-    for (const t of resolved) {
-      await db.updateTransaction(t);
-      syncService.pushTransactionUpdate(t);
-    }
-    const byId = new Map(resolved.map((t) => [t.id, t]));
-    set((s) => ({ transactions: s.transactions.map((t) => byId.get(t.id) ?? t) }));
   },
 
   exportData: () => {
@@ -235,11 +235,12 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     const valid: Transaction[] = [];
     for (const item of raw) {
       const tx = item as Partial<Transaction>;
-      if (typeof tx.id !== 'string') continue;
+      if (typeof tx.id !== 'string' || !isSyncableId(tx.id)) continue; // id senkronda yol parçası olur
       if (typeof tx.assetType !== 'string' || !(ASSET_TYPES as string[]).includes(tx.assetType)) continue;
       if (typeof tx.date !== 'string') continue;
-      if (typeof tx.amount !== 'number' || !(tx.amount >= 0)) continue;
-      if (typeof tx.unitPrice !== 'number' || !(tx.unitPrice >= 0)) continue;
+      // isFinite: JSON'da 1e999 = Infinity, ">= 0" testini geçer ve toplamları bozardı.
+      if (typeof tx.amount !== 'number' || !Number.isFinite(tx.amount) || tx.amount < 0) continue;
+      if (typeof tx.unitPrice !== 'number' || !Number.isFinite(tx.unitPrice) || tx.unitPrice < 0) continue;
       const type: TransactionType = tx.type === 'sell' ? 'sell' : 'buy';
       valid.push({
         id: tx.id,
@@ -251,7 +252,9 @@ export const useVaultStore = create<VaultState>((set, get) => ({
         totalCost: tx.amount * tx.unitPrice,
         createdAt: typeof tx.createdAt === 'string' ? tx.createdAt : new Date().toISOString(),
         ...(typeof tx.note === 'string' ? { note: tx.note.slice(0, 2000) } : {}),
-        ...(tx.fxSnapshot && typeof tx.fxSnapshot.USD === 'number' && typeof tx.fxSnapshot.EUR === 'number'
+        // Kural > 0 istiyor: 0/negatif damga senkronda reddedilirdi; damgasız al, backfill çözer.
+        ...(tx.fxSnapshot && Number.isFinite(tx.fxSnapshot.USD) && Number.isFinite(tx.fxSnapshot.EUR)
+          && tx.fxSnapshot.USD > 0 && tx.fxSnapshot.EUR > 0
           ? { fxSnapshot: { USD: tx.fxSnapshot.USD, EUR: tx.fxSnapshot.EUR } }
           : {}),
       });
@@ -262,17 +265,13 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     }
     const all = await db.getAllTransactions();
     set({ transactions: all });
+    // Eşleşmiş kasaya da yansıt: yoksa içe aktarılan kayıtlar yalnızca bu cihazda kalıyordu.
+    for (const tx of valid) syncService.pushTransaction(tx);
     get().backfillFxSnapshots(); // v1 export'unda fxSnapshot yok
   },
 
-  // Remote actions - no Firebase push (prevents loop)
-  applyRemoteAdd: async (tx) => {
-    const exists = get().transactions.some((t) => t.id === tx.id);
-    if (exists) return;
-    await db.addTransaction(tx);
-    set((s) => ({ transactions: [...s.transactions, tx] }));
-  },
-
+  // Remote actions - no Firebase push (prevents loop). Ekleme de buradan geçer (upsert):
+  // varlık kontrolü güncelleyici içinde, uygulama anında yapılır - eşzamanlı iki olay kopya üretmez.
   applyRemoteUpdate: async (tx) => {
     await db.updateTransaction(tx);
     set((s) => ({
