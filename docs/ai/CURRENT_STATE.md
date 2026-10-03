@@ -1,9 +1,9 @@
 # Current state
-Updated 2026-10-03 · origin/main · 1.3.2 (versionCode 18) sent to Play production review on 2026-10-03
+Updated 2026-10-03 · origin/main · 1.3.2 (versionCode 18) live on Play production since 2026-10-03 17:29
 
-Live: Android 1.3.1 (versionCode 17) on Play production since 2026-08-22; RTDB config latestVersionCode 17, minVersionCode 0. Member-only vault rules are live since 2026-10-03.
+Live: Android 1.3.2 (versionCode 18) on Play production since 2026-10-03 17:29 (full rollout); RTDB config latestVersionCode 18 (set 2026-10-03 via firebase-tools), minVersionCode 0. Member-only vault rules are live since 2026-10-03. Play store listing website: https://suphiati.github.io/benim_kasam/.
 
-In review: 18 (1.3.2) on the Play production track, full rollout, managed publishing off (goes live automatically once Google approves). Sent together with the new privacy policy and data safety URLs. The AD_ID declaration error (an older active build lacks the permission; 18 has it) was ignored for this release, the same decision as for 17.
+Review: Google approved 18 the same day; it went out with the new privacy policy and data safety URLs. The AD_ID declaration error (an older active build lacks the permission; 18 has it) was ignored for this release, the same decision as for 17.
 
 iOS: 1.3.1 rejected on 2026-09-11 under guideline 2.1 (needs a screen recording on a physical iPhone). BLOCKED until a physical iPhone is available; reply draft in store-assets/app-store/app-review-2.1-reply.md.
 
@@ -18,11 +18,11 @@ Done 2026-10-03:
 Verification: TEST_STATUS.md. Core sync scenarios passed live with two browser origins; the R8 release build passed on an Android 14 emulator (launch, rates, add, export, QR camera, biometric unlock). Phone-to-phone sync was NOT RUN.
 
 Open items:
-1. After Google approves 1.3.2: set config/latestVersionCode 18 (production write, owner go-ahead); raise minVersionCode later so v17 devices that never registered update and pair again.
-2. Phone-to-phone sync check on the live build, with a fresh test vault rather than the real one.
+1. Raise minVersionCode later (production write, owner go-ahead) so v17 devices that never registered update and pair again.
+2. Phone-to-phone sync check on the live build: the owner tests directly on the live version.
 3. Retired proxy removed from the code in main (rates direct from Truncgil, CSP without the Vercel origin); ships with the next build. The VITE_API_BASE_URL line in .env is now unused.
 4. Rules: add enum validation for type/assetType once v18 is widespread (older clients must not be rejected).
 5. Play recommendations for edge-to-edge (deferred, not blockers): call EdgeToEdge.enable() for Android 14 and older; deprecated window APIs come from @capacitor/status-bar (replaceable with native icon styling), Material Components and the AdMob SDK (library internals). Needs a visual check on an Android 14 or older phone.
 6. iOS 2.1 reply: needs a physical-device recording (BLOCKED); the new iOS build should carry the same fixes and the GitHub Pages privacy URL.
 
-Next step: wait for the Play review result; after approval set config/latestVersionCode 18 with the owner's go-ahead.
+Next step: the owner tests sync on the live build; the next build ships the direct-Truncgil rates change (997ec9d).
