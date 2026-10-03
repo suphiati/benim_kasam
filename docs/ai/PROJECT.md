@@ -4,7 +4,7 @@ BenimKasam is a personal tracker for foreign currency, gold and silver kept in a
 
 Actors: the device owner (anonymous Firebase auth, no sign-up) and the owner's other devices that join the same vault through QR pairing.
 
-Platforms: Android (Google Play production, com.suphiatilim.benimkasam), iOS (App Store review), web/PWA on Vercel, which also serves api/rates.ts and gizlilik.html.
+Platforms: Android (Google Play production, com.suphiatilim.benimkasam), iOS (App Store review). No web deployment; the privacy page is on GitHub Pages (https://suphiati.github.io/benim_kasam/gizlilik.html).
 
 Acceptance goals: correct money and rate math with tr-TR formatting; data available offline from IndexedDB; multi-device vault sync without duplicates; stale rates never shown as current.
 

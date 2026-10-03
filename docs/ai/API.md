@@ -1,9 +1,8 @@
 # API
-GET /api/rates (api/rates.ts on Vercel, fra1). Public, CORS *, OPTIONS returns 204. No auth and no user data.
+The app has no backend API of its own. The Vercel rates proxy (api/rates.ts) was retired on 2026-10-03; it is a mobile app (owner decision).
 
-- 200: flat map of currency and metal keys plus _meta {sources, failures, divergences, timestamp, fetchedAt}. If live gold data is incomplete, it serves the Upstash last-good snapshot with _meta.degraded true and "last-good" in sources.
-- 503: gold incomplete and no last-good snapshot. 500: fetch failure. Both carry sources and failures.
-- Cache-Control: s-maxage=60, stale-while-revalidate=120, stale-if-error=86400.
-- Upstreams: finans.truncgil.com, api.genelpara.com, api.exchangerate-api.com. UPSTASH_REDIS_REST_URL/TOKEN enable the last-good store.
+Rates: src/services/rateService.ts fetches https://finans.truncgil.com/v3/today.json directly with `cache: 'no-store'` (Truncgil sends Cache-Control max-age=315360000) and an 8 s timeout; apiMappers.ts parses Turkish number formats and maps the hyphenated gold keys. A snapshot is used only if it contains every gold and silver item; otherwise the last complete snapshot from localStorage is shown as "markets closed".
 
-Client: src/services/rateService.ts and apiMappers.ts; base URL from VITE_API_BASE_URL, falling back to Truncgil directly when unset.
+Historical FX: src/services/fxHistoryService.ts calls https://api.frankfurter.dev/v1 (ECB reference rates).
+
+Sync and remote config: Firebase RTDB (see DATABASE.md).

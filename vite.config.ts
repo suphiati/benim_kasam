@@ -1,4 +1,4 @@
-import { defineConfig, loadEnv } from 'vite'
+import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -9,7 +9,7 @@ import pkg from './package.json'
  * HMR websocket'i ve enjekte ettiği script'leri bozmamak için hariç tutulur).
  *
  * connect-src, uygulamanın GERÇEKTEN bağlandığı tüm origin'leri listeler: Firebase
- * RTDB (https + wss) ve Auth (googleapis) + kur kaynakları + (native'de) Vercel proxy.
+ * RTDB (https + wss) ve Auth (googleapis) + kur kaynakları (Truncgil, Frankfurter).
  * Biri eksik olsaydı ilgili senkron/kur isteği "refused" olur, işlevi bozardı - bu yüzden
  * liste kaynak koddaki fetch hedefleriyle birlikte güncellenmeli.
  *
@@ -18,19 +18,16 @@ import pkg from './package.json'
  * inline stil enjekte eden kütüphaneler ise style-src 'unsafe-inline' ile karşılandığından
  * mevcut işlevsellik bozulmaz.
  */
-function cspMeta(apiBase?: string): string {
+function cspMeta(): string {
   const connect = [
     "'self'",
     'https://finans.truncgil.com',
-    'https://api.genelpara.com',
-    'https://api.exchangerate-api.com',
     'https://api.frankfurter.dev', // fxHistoryService: geçmiş tarihli işlemlerin USD/EUR kuru
     'https://*.firebaseio.com',
     'https://*.firebasedatabase.app',
     'wss://*.firebaseio.com',
     'wss://*.firebasedatabase.app',
     'https://*.googleapis.com',
-    ...(apiBase ? [apiBase] : []),
   ].join(' ')
   return [
     "default-src 'self'",
@@ -48,9 +45,6 @@ function cspMeta(apiBase?: string): string {
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '')
-  const apiBase = env.VITE_API_BASE_URL?.replace(/\/$/, '') || undefined
-
   return {
     // Sürüm tek kaynaktan: package.json. Eskiden SettingsPage'de elle yazılıydı ve
     // build.gradle'dan kaymıştı (arayüz v1.1.0 derken yüklü sürüm 1.0.1'di).
@@ -66,7 +60,7 @@ export default defineConfig(({ mode }) => {
           handler(html: string) {
             return html.replace(
               '</title>',
-              `</title>\n    <meta http-equiv="Content-Security-Policy" content="${cspMeta(apiBase)}" />`,
+              `</title>\n    <meta http-equiv="Content-Security-Policy" content="${cspMeta()}" />`,
             )
           },
         },
@@ -104,11 +98,6 @@ export default defineConfig(({ mode }) => {
               urlPattern: /^https:\/\/finans\.truncgil\.com\/.*/i,
               handler: 'NetworkFirst',
               options: { cacheName: 'api-rates', expiration: { maxEntries: 10, maxAgeSeconds: 300 } },
-            },
-            {
-              urlPattern: /\/api\/rates/,
-              handler: 'NetworkFirst',
-              options: { cacheName: 'api-proxy-rates', expiration: { maxEntries: 10, maxAgeSeconds: 300 } },
             },
           ],
         },

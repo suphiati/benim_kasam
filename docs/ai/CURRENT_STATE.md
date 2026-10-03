@@ -20,7 +20,7 @@ Verification: TEST_STATUS.md. Core sync scenarios passed live with two browser o
 Open items:
 1. After Google approves 1.3.2: set config/latestVersionCode 18 (production write, owner go-ahead); raise minVersionCode later so v17 devices that never registered update and pair again.
 2. Phone-to-phone sync check on the live build, with a fresh test vault rather than the real one.
-3. The build still lists the retired proxy (VITE_API_BASE_URL=https://benim-kasam.vercel.app), so every rate refresh first tries a dead origin; remove it in the next build so a third party cannot claim that subdomain and serve fake rates.
+3. Retired proxy removed from the code in main (rates direct from Truncgil, CSP without the Vercel origin); ships with the next build. The VITE_API_BASE_URL line in .env is now unused.
 4. Rules: add enum validation for type/assetType once v18 is widespread (older clients must not be rejected).
 5. Play recommendations for edge-to-edge (deferred, not blockers): call EdgeToEdge.enable() for Android 14 and older; deprecated window APIs come from @capacitor/status-bar (replaceable with native icon styling), Material Components and the AdMob SDK (library internals). Needs a visual check on an Android 14 or older phone.
 6. iOS 2.1 reply: needs a physical-device recording (BLOCKED); the new iOS build should carry the same fixes and the GitHub Pages privacy URL.

@@ -1,4 +1,3 @@
-import { Capacitor } from '@capacitor/core';
 import type { LiveRate } from '../types';
 import { ASSET_TYPES, ASSET_CONFIG } from '../constants/assets';
 import { mapTruncgilResponse, type RatesMeta, type RatesWithMeta } from './apiMappers';
@@ -80,35 +79,18 @@ function isMarketDataStale(meta: RatesMeta): boolean {
   return marketAgeMs(meta.timestamp) >= MARKET_STALE_MS;
 }
 
-// Timeout'lu fetch: kaynak yanıt vermezse 8 sn sonra iptal edip yedeğe düşeriz
+// Timeout'lu fetch: kaynak yanıt vermezse 8 sn sonra iptal edip cache'e düşeriz.
+// Truncgil dosyayı `Cache-Control: max-age=315360000` (10 yıl) ile sunuyor: varsayılan
+// modda tarayıcı/WebView ilk kopyayı ağa hiç çıkmadan döndürür ve kur o anda donar
+// ("Piyasa: 20 gün önce"). Bu yüzden no-store.
 async function fetchWithTimeout(url: string): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-  // Truncgil dosyayı `Cache-Control: max-age=315360000` (10 yıl) ile sunuyor: varsayılan
-  // modda tarayıcı/WebView ilk kopyayı ağa hiç çıkmadan döndürür ve kur o anda donar
-  // ("Piyasa: 20 gün önce"). Proxy'ye uygulanmaz: no-store isteğe no-cache başlığı ekler,
-  // CDN önbelleğini (s-maxage) delmesin.
-  const cache: RequestCache = url === TRUNCGIL_DIRECT ? 'no-store' : 'default';
   try {
-    return await fetch(url, { cache, signal: controller.signal });
+    return await fetch(url, { cache: 'no-store', signal: controller.signal });
   } finally {
     clearTimeout(timer);
   }
-}
-
-function getApiUrl(): string {
-  const base = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '');
-  // Native app (Capacitor): mutlak Vercel proxy URL'i gerekir (relatif /api/rates çalışmaz).
-  // VITE_API_BASE_URL tanımlıysa çoklu kaynaklı proxy'yi kullan, yoksa doğrudan Truncgil'e düş.
-  if (Capacitor.isNativePlatform()) {
-    return base ? `${base}/api/rates` : TRUNCGIL_DIRECT;
-  }
-  // Web deploy: aynı origin proxy
-  if (window.location.hostname !== 'localhost') {
-    return base ? `${base}/api/rates` : '/api/rates';
-  }
-  // Localhost geliştirme: doğrudan Truncgil
-  return TRUNCGIL_DIRECT;
 }
 
 // LocalStorage'a cache'le (offline fallback). YALNIZCA TAM anlık görüntüler (gerçek
@@ -153,15 +135,7 @@ function getStaleCache(): RatesWithMeta | null {
   }
 }
 
-async function fetchFromProxy(): Promise<RatesWithMeta> {
-  const url = getApiUrl();
-  const res = await fetchWithTimeout(url);
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
-  const data = await res.json();
-  return mapTruncgilResponse(data);
-}
-
-// Truncgil bazen kırpılmış JSON döndürüyor - toleranslı parse (api/rates.ts ile aynı mantık)
+// Truncgil bazen kırpılmış JSON döndürüyor - toleranslı parse
 function safeJsonParse(text: string): Record<string, unknown> {
   try {
     return JSON.parse(text) as Record<string, unknown>;
@@ -212,15 +186,7 @@ export async function fetchLiveRates(): Promise<FetchRatesResult> {
     return null;
   };
 
-  // 1. Proxy'den dene (çoklu kaynak backend)
-  try {
-    const out = preferComplete(await fetchFromProxy());
-    if (out) return out;
-  } catch (err) {
-    console.warn('Proxy fetch failed:', err);
-  }
-
-  // 2. Doğrudan Truncgil dene (tam veri kaynağı)
+  // 1. Truncgil'den doğrudan çek. Mobil uygulama; ara sunucu (eski Vercel proxy'si) yok.
   try {
     const out = preferComplete(await fetchDirectTruncgil());
     if (out) return out;
@@ -228,7 +194,7 @@ export async function fetchLiveRates(): Promise<FetchRatesResult> {
     console.warn('Direct Truncgil failed:', err);
   }
 
-  // 3. Taze cache varsa kullan (canlı fetch başarısız - veri en fazla 10 dk eski).
+  // 2. Taze cache varsa kullan (canlı fetch başarısız - veri en fazla 10 dk eski).
   // Cache yalnızca TAM snapshot tutar (preferComplete öyle yazar), altın burada mevcut.
   const cached = getCachedRates();
   if (cached && cached.rates.length > 0) {
@@ -236,14 +202,14 @@ export async function fetchLiveRates(): Promise<FetchRatesResult> {
     return { ...cached, marketClosed: isMarketDataStale(cached.meta) };
   }
 
-  // 4. Eski cache bile varsa kullan (offline durumu)
+  // 3. Eski cache bile varsa kullan (offline durumu)
   const stale = getStaleCache();
   if (stale && stale.rates.length > 0) {
     console.info('Using stale cached rates');
     return { ...stale, marketClosed: isMarketDataStale(stale.meta) };
   }
 
-  // 5. Hiçbir şey çalışmadı
+  // 4. Hiçbir şey çalışmadı
   return {
     rates: [],
     meta: { sources: ['none'], timestamp: new Date().toISOString(), fetchedAt: new Date().toISOString() },
