@@ -7,7 +7,7 @@
 | Types + build | `npm run build` | PASS | chunk > 500 kB warning |
 | CSP | production build served by `vite preview`, fetch from the page | PASS | api.frankfurter.dev 200; example.com blocked (CSP active) |
 | Capacitor sync | `npx cap sync` | PASS | only an EOL-only Package.swift change, discarded |
-| Android release build | `gradlew assembleRelease bundleRelease` (android/) | PASS | versionCode 18 / 1.3.2, signed with the upload key |
+| Android release build | `npm run build`, `npx cap sync`, `gradlew bundleRelease` (android/) at 545e594 | PASS | versionCode 18 / 1.3.2, signed with the upload key (CN=BenimKasam); bundle contains the current web build (index-BpOquhc6.js); cap sync left only an EOL-only Package.swift change, discarded |
 | RTDB rules | Firebase database emulator 4.11.2 (firebase-tools 13, Java 17), 38 REST cases | PASS | members, non-members, invite window, listing, multi-path claim, malformed writes, legacy and emptied vaults |
 | RTDB rules live | throwaway anonymous users on production | PASS | non-member read 401 (200 before deploy); vault create, write and invite-window join 8/8; test data and users deleted |
 | Independent review | security-reviewer (rules), bk-money-reviewer (sync diff) | PASS with notes | no blocker; follow-ups in CURRENT_STATE.md |

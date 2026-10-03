@@ -1,5 +1,5 @@
 # Current state
-Updated 2026-10-03 · origin/main · release candidate 1.3.2 (versionCode 18), AAB not built yet
+Updated 2026-10-03 · origin/main · release candidate 1.3.2 (versionCode 18), signed AAB built at 545e594
 
 Live: Android 1.3.1 (versionCode 17) on Play production since 2026-08-22; RTDB config latestVersionCode 17, minVersionCode 0. Member-only vault rules are live since 2026-10-03.
 
@@ -7,7 +7,7 @@ iOS: 1.3.1 rejected on 2026-09-11 under guideline 2.1 (needs a screen recording 
 
 Done 2026-10-03:
 - Vault rules: members only; a joiner may add only itself, to a brand-new vault or inside the invite window. Deploy verified on production; rollback file database.rules.phase1-rollback.json (f81e700).
-- 1.3.2 prepared (code baseline 223a8b0): sync fix (persisted outbox, reconcile on connect, reconnect on resume, "Bağlantı yok" when access is denied), direct Truncgil rates without the browser cache, version bump, release notes in store-assets/release-notes-1.3.2.txt, `npx cap sync`, CSP now allows api.frankfurter.dev so historical FX snapshots work (checked in the production build). The release AAB is built last, once all remaining work is done (owner decision); the local AAB from 223a8b0 is outdated.
+- 1.3.2 prepared (code baseline 223a8b0): sync fix (persisted outbox, reconcile on connect, reconnect on resume, "Bağlantı yok" when access is denied), direct Truncgil rates without the browser cache, version bump, release notes in store-assets/release-notes-1.3.2.txt, `npx cap sync`, CSP now allows api.frankfurter.dev so historical FX snapshots work (checked in the production build). The signed release AAB was built from 545e594 on 2026-10-03 (android/app/build/outputs/bundle/release/app-release.aab, copy on the owner's Desktop as BenimKasam-1.3.2-18.aab; upload key CN=BenimKasam).
 - Sync hardening (f1f83c8): remote records with an unknown asset type, type or malformed date are ignored; the invite window closes on pairing and when the QR screen closes and uses server time; the last member leaving deletes the vault (never the vault the device is currently paired with); legacy rows without type upload as buys; the form and import reject malformed dates.
 - Owner-requested fixes (4757b53, a9e988d; not pushed): a manually typed price is no longer overwritten by the rate refresh; the QR scan screen no longer restarts the camera when an empty vault fills after pairing; "Delete all" warns that paired devices are wiped too; the one-time "deleted rows may reappear once" note is now in the store release notes; debug builds install side by side as com.suphiatilim.benimkasam.test ("BenimKasam Test"). Test APK: android/app/build/outputs/apk/debug/app-debug.apk (copy on the owner's Desktop).
 
@@ -21,4 +21,4 @@ Open items:
 5. Rates durability: Upstash env vars not configured at last check (not verified this session).
 6. iOS 2.1 reply: needs a physical-device recording (BLOCKED).
 
-Next step: push after the owner's go-ahead, collect the owner's phone test result, then build the AAB (`npm run build`, `npx cap sync`, `gradlew bundleRelease`) and upload with the owner's go-ahead.
+Next step: collect the owner's phone test result, then upload the AAB to Play (internal or closed testing first) with the owner's go-ahead.
