@@ -166,6 +166,7 @@ export const en: Record<TKey, string> = {
   'settings.clear': 'Delete All Data',
   'settings.clearDesc': 'This cannot be undone',
   'settings.clearMessage': 'All your transaction records will be permanently deleted. This cannot be undone!',
+  'settings.clearMessagePaired': 'All your transaction records will be permanently deleted from this device and from your paired devices. This cannot be undone!',
   'settings.clearConfirm': 'Delete All',
   'settings.tagline': 'Personal Vault Tracker',
 

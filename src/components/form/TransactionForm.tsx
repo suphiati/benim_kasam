@@ -95,6 +95,9 @@ export function TransactionForm({ editingTransaction, onSaved }: TransactionForm
       const rate = liveRates.find((r) => r.assetType === assetType);
       if (rate) {
         setUnitPrice(rate.sellPrice.toFixed(2));
+        // Bir seçim = bir doldurma: birkaç dakikada bir yenilenen kur, sonradan elle
+        // yazılan fiyatı ezmesin.
+        userPickedAsset.current = false;
       }
     }
   }, [assetType, liveRates, editingTransaction]);
@@ -267,7 +270,10 @@ export function TransactionForm({ editingTransaction, onSaved }: TransactionForm
             step="any"
             min="0"
             value={unitPrice}
-            onChange={(e) => setUnitPrice(e.target.value)}
+            onChange={(e) => {
+              userPickedAsset.current = false; // elle girilen fiyat, sonra gelen kurla ezilmez
+              setUnitPrice(e.target.value);
+            }}
             placeholder="0.00"
             className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-vault-500 focus:border-transparent"
           />

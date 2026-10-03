@@ -361,7 +361,8 @@ export function SettingsPage({ isConnected, onDisconnect }: SettingsPageProps) {
       {showClearConfirm && (
         <ConfirmModal
           title={t('settings.clear')}
-          message={t('settings.clearMessage')}
+          // Eşleşmişken silme diğer cihazlara da gider: kullanıcı bunu bilmeden onaylamasın.
+          message={t(vaultId ? 'settings.clearMessagePaired' : 'settings.clearMessage')}
           confirmLabel={t('settings.clearConfirm')}
           onConfirm={handleClearAll}
           onCancel={() => setShowClearConfirm(false)}

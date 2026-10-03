@@ -31,8 +31,29 @@ export function VaultPage({ isConnected, onConnect }: VaultPageProps) {
     </div>
   ) : null;
 
+  // Modallar her iki dönüşte de AYNI konumda (kökteki parçanın 2. çocuğu): boş kasaya QR ile
+  // veri gelince sayfa dolu görünüme geçiyor; modal dalın içinde olsaydı yeniden kurulur ve
+  // tarama bitmişken kamera tekrar açılırdı.
+  const modals = (
+    <>
+      {showQrGenerate && (
+        <QrGenerateModal
+          onClose={() => setShowQrGenerate(false)}
+          onConnect={onConnect}
+        />
+      )}
+      {showQrScan && (
+        <QrScanModal
+          onClose={() => setShowQrScan(false)}
+          onConnect={onConnect}
+        />
+      )}
+    </>
+  );
+
   if (transactions.length === 0) {
     return (
+      <>
       <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
         <InstallGuide />
         {syncBadge && <div className="mb-2">{syncBadge}</div>}
@@ -50,17 +71,14 @@ export function VaultPage({ isConnected, onConnect }: VaultPageProps) {
           <ScanLine size={18} />
           {t('vault.qrScan')}
         </button>
-        {showQrScan && (
-          <QrScanModal
-            onClose={() => setShowQrScan(false)}
-            onConnect={onConnect}
-          />
-        )}
       </div>
+      {modals}
+      </>
     );
   }
 
   return (
+    <>
     <div className="flex-1 overflow-y-auto pb-4">
       <InstallGuide />
       <TotalVaultCard
@@ -89,18 +107,6 @@ export function VaultPage({ isConnected, onConnect }: VaultPageProps) {
         </button>
       </div>
       {syncBadge && <div className="flex justify-center mt-2">{syncBadge}</div>}
-      {showQrGenerate && (
-        <QrGenerateModal
-          onClose={() => setShowQrGenerate(false)}
-          onConnect={onConnect}
-        />
-      )}
-      {showQrScan && (
-        <QrScanModal
-          onClose={() => setShowQrScan(false)}
-          onConnect={onConnect}
-        />
-      )}
       <LiveRatesBar />
       <div className="px-4 mt-4">
         <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
@@ -113,5 +119,7 @@ export function VaultPage({ isConnected, onConnect }: VaultPageProps) {
         </div>
       </div>
     </div>
+    {modals}
+    </>
   );
 }

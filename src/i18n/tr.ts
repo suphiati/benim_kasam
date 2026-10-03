@@ -181,6 +181,7 @@ export const tr = {
   'settings.clear': 'Tüm Verileri Sil',
   'settings.clearDesc': 'Bu işlem geri alınamaz',
   'settings.clearMessage': 'Tüm işlem kayıtlarınız kalıcı olarak silinecek. Bu işlem geri alınamaz!',
+  'settings.clearMessagePaired': 'Tüm işlem kayıtlarınız bu cihazdan ve eşleştirdiğiniz diğer cihazlardan da kalıcı olarak silinecek. Bu işlem geri alınamaz!',
   'settings.clearConfirm': 'Hepsini Sil',
   'settings.tagline': 'Kişisel Kasa Takip Uygulaması',
 
