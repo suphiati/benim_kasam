@@ -1,0 +1,18 @@
+BenimKasam 1.3.3 (versionCode 19) — Sürüm Notları
+=================================================
+
+--- Türkçe (tr-TR) ---
+Bu sürümde:
+• Döviz ve altın kurları daha hızlı yükleniyor.
+• Performans ve kararlılık iyileştirmeleri yapıldı.
+Görüş ve önerileriniz bizim için değerli.
+
+--- English (en-US) ---
+What's new:
+• Currency and gold rates now load faster.
+• Performance and stability improvements.
+We'd love to hear your feedback.
+
+--- Dahili not (mağaza metnine yazılmaz) ---
+• Kurlar artık doğrudan Truncgil'den alınıyor; 1.3.2'nin her yenilemede önce denediği kapalı Vercel adresi kaldırıldı (997ec9d).
+• iOS derlemesi aynı sürümle (ios-v1.3.3) App Store Connect'e yüklendi; incelemeye gönderilmedi (2.1 cevabı fiziksel iPhone kaydı bekliyor).
