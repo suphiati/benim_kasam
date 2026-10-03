@@ -10,4 +10,4 @@ Firebase RTDB (root deny-all):
 
 IndexedDB benim_kasam_db v1: store transactions (keyPath id; indexes by-asset, by-date). The upgrade callback branches on oldVersion, so a DB_VERSION bump needs a new guarded branch.
 
-Ownership: no accounts; every paired device of a vault is a member. A vault whose members all left stays inaccessible; devices pair again into a new vault.
+Ownership: no accounts; every paired device of a vault is a member. The last member to unpair deletes the vault; a vault left without members otherwise (simultaneous unpair, lost device) stays inaccessible and devices pair again into a new vault.
