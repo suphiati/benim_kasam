@@ -16,8 +16,8 @@ App Store açıklamada emoji kabul etmiyor ("invalid characters"), bölüm başl
 | SKU | benimkasam-ios |
 | Birincil kategori | Finans |
 | Telif hakkı | 2026 RiskManage Studio |
-| Destek URL'si | https://benim-kasam.vercel.app |
-| Gizlilik politikası URL'si | https://benim-kasam.vercel.app/gizlilik.html |
+| Destek URL'si | https://suphiati.github.io/benim_kasam/ |
+| Gizlilik politikası URL'si | https://suphiati.github.io/benim_kasam/gizlilik.html |
 | Fiyat | Ücretsiz, tüm ülkeler |
 
 ## Türkçe
@@ -103,7 +103,7 @@ How to review:
 
 Data: transactions are stored on the device. Only if the user explicitly pairs devices via QR are transactions synced through Firebase Realtime Database under a random vault ID with anonymous authentication. No personal information is collected.
 
-Market prices are fetched from public sources through our own server (benim-kasam.vercel.app) for information only. The app provides no investment advice, trading, brokerage or other financial services.
+Market prices are fetched directly from public sources (Truncgil Finans) for information only. The app provides no investment advice, trading, brokerage or other financial services.
 ```
 
 ## App Gizliliği (gizlilik etiketi)

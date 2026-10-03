@@ -50,7 +50,7 @@ No login, account or sample file is needed; every feature is available right aft
 - Optional sync: "QR Oluştur" (Generate QR) on one device and "QR Oku" (Scan QR) on a second device pair them. Pairing needs two devices and is entirely optional.
 
 4. External services
-- Our own server on Vercel (benim-kasam.vercel.app/api/rates) returns current market prices. It aggregates public data from Truncgil Finans (finans.truncgil.com), GenelPara (api.genelpara.com) and ExchangeRate-API (api.exchangerate-api.com). If our server cannot be reached, the app reads Truncgil Finans directly.
+- Truncgil Finans (finans.truncgil.com) provides current market prices; the app reads it directly. (Earlier builds first tried our own price server, which has been retired.)
 - Frankfurter (api.frankfurter.dev, European Central Bank reference rates) provides historical exchange rates for showing costs in US dollars or euros.
 - Google Firebase Realtime Database and Firebase Anonymous Authentication are used only for the optional QR sync.
 - Apple's iTunes Search API is used to check whether a newer version is available on the App Store.
@@ -81,7 +81,7 @@ HOW TO REVIEW
 4. Optional sync: "QR Oluştur" (Generate QR) on one device and "QR Oku" (Scan QR) on a second device pair them. It needs two devices and is optional.
 
 EXTERNAL SERVICES
-- Our server on Vercel (benim-kasam.vercel.app/api/rates): current prices aggregated from Truncgil Finans, GenelPara and ExchangeRate-API; the app falls back to Truncgil Finans directly.
+- Truncgil Finans: current market prices, read directly by the app.
 - Frankfurter (European Central Bank reference rates): historical exchange rates.
 - Google Firebase Realtime Database + Anonymous Authentication: only for optional QR sync.
 - Apple iTunes Search API: new version check.
