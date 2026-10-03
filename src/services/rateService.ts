@@ -81,11 +81,16 @@ function isMarketDataStale(meta: RatesMeta): boolean {
 }
 
 // Timeout'lu fetch: kaynak yanıt vermezse 8 sn sonra iptal edip yedeğe düşeriz
-async function fetchWithTimeout(url: string, init?: RequestInit): Promise<Response> {
+async function fetchWithTimeout(url: string): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  // Truncgil dosyayı `Cache-Control: max-age=315360000` (10 yıl) ile sunuyor: varsayılan
+  // modda tarayıcı/WebView ilk kopyayı ağa hiç çıkmadan döndürür ve kur o anda donar
+  // ("Piyasa: 20 gün önce"). Proxy'ye uygulanmaz: no-store isteğe no-cache başlığı ekler,
+  // CDN önbelleğini (s-maxage) delmesin.
+  const cache: RequestCache = url === TRUNCGIL_DIRECT ? 'no-store' : 'default';
   try {
-    return await fetch(url, { ...init, signal: controller.signal });
+    return await fetch(url, { cache, signal: controller.signal });
   } finally {
     clearTimeout(timer);
   }
