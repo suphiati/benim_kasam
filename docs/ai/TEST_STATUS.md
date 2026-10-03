@@ -20,3 +20,5 @@
 | Two-device sync on phones, offline/kill/resume, biometric | devices | NOT RUN | owner will test with the side-by-side APK |
 | iOS simulator smoke | .github/workflows/ios.yml | CI | runs on push |
 | Privacy page hosting | GitHub Pages workflow run 37128273401 (441858d) | PASS | https://suphiati.github.io/benim_kasam/gizlilik.html returns 200 with the policy title; Play quick checks passed and 3 changes were sent for review |
+| 1.3.3 release build | `npm run build`, `npx cap sync`, `gradlew bundleRelease assembleRelease` at a9836ab | PASS | versionCode 19 / 1.3.3, upload key CN=BenimKasam, mapping included, no vercel.app in the bundle; release APK on Android 14 AVD: launch and live rates ("Market: 8 minutes ago"), crash buffer empty |
+| iOS 1.3.3 build | GitHub Actions run 37133124230 (tag ios-v1.3.3) | PASS | simulator smoke and signed upload to App Store Connect, build 1.3.3 (16.1), "No errors uploading archive" |
