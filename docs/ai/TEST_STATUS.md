@@ -1,10 +1,11 @@
 # TEST_STATUS
-2026-10-03, Windows host, cwd repo root unless noted. Code baseline 223a8b0 (1.3.2).
+2026-10-03, Windows host, cwd repo root unless noted. Code baseline 223a8b0 (1.3.2); lint and build re-run after the CSP fix: PASS.
 
 | Check | Command/action | Result | Notes |
 |---|---|---|---|
 | Lint | `npm run lint` | PASS | 0 problems |
 | Types + build | `npm run build` | PASS | chunk > 500 kB warning |
+| CSP | production build served by `vite preview`, fetch from the page | PASS | api.frankfurter.dev 200; example.com blocked (CSP active) |
 | Capacitor sync | `npx cap sync` | PASS | only an EOL-only Package.swift change, discarded |
 | Android release build | `gradlew assembleRelease bundleRelease` (android/) | PASS | versionCode 18 / 1.3.2, signed with the upload key |
 | RTDB rules | Firebase database emulator 4.11.2 (firebase-tools 13, Java 17), 38 REST cases | PASS | members, non-members, invite window, listing, multi-path claim, malformed writes, legacy and emptied vaults |

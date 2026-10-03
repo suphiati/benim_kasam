@@ -1,11 +1,11 @@
 # Release evidence
 
 Target: Android 1.3.2 (versionCode 18), Google Play
-Status: ready for an internal or closed testing upload; NO-GO for production until a two-device sync check passes
-Baseline: 223a8b0 (code), local main, not pushed
+Status: NO-GO until the AAB is rebuilt after the remaining work (owner decision) and a two-device sync check passes
+Baseline: the next AAB is built from origin/main once the remaining work is done
 Authorization: preparation only; Play upload and RTDB config writes need the owner's go-ahead
 
-Artifacts (local, not in git):
+Artifacts (local, not in git; built from 223a8b0, before the CSP fix, so they must be rebuilt):
 - android/app/build/outputs/bundle/release/app-release.aab (signed with the upload key)
 - android/app/build/outputs/apk/release/app-release.apk
 
@@ -19,7 +19,7 @@ Release notes: store-assets/release-notes-1.3.2.txt (store text plus internal no
 | Two-device sync | devices | pair, add, edit, delete, offline | NOT RUN | none |
 | Vault rules | production | deploy + live checks | PASS | TEST_STATUS.md |
 
-Blockers: two-device sync check not run
+Blockers: AAB not rebuilt yet; two-device sync check not run
 Rollback: halt the staged rollout in Play; vault rules via database.rules.phase1-rollback.json
 After release: set config/latestVersionCode 18 (owner authorization)
 External release ID: none yet
