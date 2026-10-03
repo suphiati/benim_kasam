@@ -13,7 +13,7 @@ import type { FxSnapshot } from '../types';
  */
 
 // Kanonik alan adı .dev/v1 (.app oraya yönleniyor). CORS açık — proxy gerekmiyor,
-// tarayıcıdan doğrudan çağrılabilir (benim-kasam.vercel.app origin'inden doğrulandı).
+// tarayıcıdan ve WebView'dan doğrudan çağrılabilir.
 const API_BASE = 'https://api.frankfurter.dev/v1';
 const CACHE_KEY = 'benimkasam_fx_history';
 const TIMEOUT_MS = 8000;

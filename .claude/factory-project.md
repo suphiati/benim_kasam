@@ -1,5 +1,5 @@
 # Factory profile — BenimKasam
-Stack: Vite + React + TypeScript + zustand + idb, Capacitor (Android/iOS), Firebase Realtime Database + Auth, Vercel function `api/rates.ts`, AdMob, biometric unlock, in-app update.
+Stack: Vite + React + TypeScript + zustand + idb, Capacitor (Android/iOS), Firebase Realtime Database + Auth, rates fetched directly from Truncgil (no backend), AdMob, biometric unlock, in-app update.
 - Web/UI: web-frontend + react-spa-web + ui-implementation.
 - Native shell: capacitor-hybrid; ads: mobile-ads-consent; store: store-release + store-listing-aso.
 - Data/rules: backend-database + firebase-backend + bk-vault-sync. Money math: bk-money-reviewer before merge.
