@@ -34,6 +34,11 @@ android {
         }
     }
     buildTypes {
+        debug {
+            // Test APK'sı Play sürümünün YANINA kurulur (ayrı paket, ayrı veri): imza çakışması
+            // yok, gerçek kasaya ve yerel kayıtlara dokunmaz. Ad: src/debug/res/values/strings.xml
+            applicationIdSuffix ".test"
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
