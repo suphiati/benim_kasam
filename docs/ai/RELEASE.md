@@ -1,16 +1,25 @@
 # Release evidence
 
-Status: NO-GO for the next release (not evaluated)
-Live: Android 1.3.1 (versionCode 17); iOS 1.3.1 rejected under guideline 2.1, BLOCKED on a physical iPhone
-Baseline/target: 5ac8cc4 / next Android versionCode 18
-Authorization: preparation only
+Target: Android 1.3.2 (versionCode 18), Google Play
+Status: ready for an internal or closed testing upload; NO-GO for production until a two-device sync check passes
+Baseline: 223a8b0 (code), local main, not pushed
+Authorization: preparation only; Play upload and RTDB config writes need the owner's go-ahead
+
+Artifacts (local, not in git):
+- android/app/build/outputs/bundle/release/app-release.aab (signed with the upload key)
+- android/app/build/outputs/apk/release/app-release.apk
+
+Release notes: store-assets/release-notes-1.3.2.txt (store text plus internal notes)
 
 | Check | Baseline/environment | Command/action | Result | Evidence |
 |---|---|---|---|---|
-| Types + bundle | 5ac8cc4, clean worktree | tsc + `vite build` | PASS | TEST_STATUS.md |
-| Lint | 5ac8cc4, clean worktree | `eslint .` | FAIL (1 error) | TEST_STATUS.md |
-| Android release smoke | device | bk-release step 6 | NOT RUN | none |
+| Lint, types, build | 223a8b0, Windows | `npm run lint`, `npm run build` | PASS | TEST_STATUS.md |
+| Signed AAB/APK | 223a8b0, Windows | gradlew bundleRelease, assembleRelease | PASS | aapt: versionCode 18, versionName 1.3.2 |
+| Emulator smoke | Android 14 AVD | launch, main screens, rates | PARTIAL | TEST_STATUS.md |
+| Two-device sync | devices | pair, add, edit, delete, offline | NOT RUN | none |
+| Vault rules | production | deploy + live checks | PASS | TEST_STATUS.md |
 
-Blockers: lint error pending in the sync fix; release smoke not run; privacy policy URL on Vercel is down
-Rollback: not prepared
-External release ID: Play versionCode 17
+Blockers: two-device sync check not run
+Rollback: halt the staged rollout in Play; vault rules via database.rules.phase1-rollback.json
+After release: set config/latestVersionCode 18 (owner authorization)
+External release ID: none yet

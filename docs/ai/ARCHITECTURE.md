@@ -8,7 +8,7 @@ Modules: src/pages (Vault, Transactions, AddTransaction, Settings); src/componen
 Data flow: transactions are written to IndexedDB first and mirrored to RTDB vaults/$vaultId/transactions when the device is paired. Rates come from /api/rates when VITE_API_BASE_URL is set, otherwise directly from Truncgil, with client cache and fallbacks. updateService combines RTDB config (minVersionCode, latestVersionCode) with the native Play in-app update.
 
 Trust boundaries:
-- Client and RTDB: anonymous auth. Vault rules are hardened in phases: phase 1 (members/$uid and openUntil recorded) is live, the member-only lock is prepared in database.rules.phase2-locked.json. Transaction fields are schema-validated and unknown keys rejected.
+- Client and RTDB: anonymous auth; vaults are member-only. New devices join through a member-opened invite window (openUntil) while the QR screen is shown. Transaction fields are schema-validated and unknown keys rejected.
 - Client and api/rates.ts: public GET with CORS *, no user data. Upstream responses are untrusted and checked for completeness; an Upstash last-good snapshot is optional (env-gated).
 - QR payloads are untrusted; the vault id format is validated on scan.
 - Device: biometric unlock, android:allowBackup="false", production-only CSP injected by vite.config.ts.
