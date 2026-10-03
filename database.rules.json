@@ -11,10 +11,13 @@
     },
     "vaults": {
       "$vaultId": {
-        ".read": "auth != null",
-        ".write": "auth != null",
+        ".read": "auth != null && data.child('members').child(auth.uid).exists()",
+        ".write": "auth != null && data.child('members').child(auth.uid).exists()",
         "members": {
-          "$uid": { ".validate": "$uid === auth.uid && newData.isBoolean()" }
+          "$uid": {
+            ".write": "auth != null && $uid === auth.uid && newData.val() === true && (!data.parent().parent().exists() || (data.parent().parent().child('openUntil').isNumber() && now < data.parent().parent().child('openUntil').val()))",
+            ".validate": "$uid === auth.uid && newData.isBoolean()"
+          }
         },
         "openUntil": { ".validate": "newData.isNumber()" },
         "transactions": {
